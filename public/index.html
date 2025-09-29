@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Inventario</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📦Alpha Stock - Sistema de Inventario</h1>
+            <p>Bienvenida Carolinagit</p>
+        </div>
+
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-icon">📊</div>
+                <div class="stat-number" id="totalProducts">0</div>
+                <div class="stat-label">Total Productos</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📈</div>
+                <div class="stat-number" id="recentProducts">0</div>
+                <div class="stat-label">Agregados Esta Semana</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">💰</div>
+                <div class="stat-number" id="totalValue">$0</div>
+                <div class="stat-label">Valor Total Inventario</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-icon">📦</div>
+                <div class="stat-number" id="productTypes">0</div>
+                <div class="stat-label">Tipos de Productos</div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="tabs">
+                <button class="tab active" onclick="switchTab('dashboard')">Dashboard</button>
+                <button class="tab" onclick="switchTab('add')">Agregar Producto</button>
+                <button class="tab" onclick="switchTab('list')">Lista de Productos</button>
+            </div>
+
+            <div id="dashboard" class="tab-content active">
+                <div class="recent-products">
+                    <h3>🕐 Productos Agregados Recientemente</h3>
+                    <div id="recentProductsList"></div>
+                </div>
+            </div>
+
+            <div id="add" class="tab-content">
+                <h2>➕ Agregar Nuevo Producto</h2>
+                <form id="productForm">
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="productName">Nombre del Producto</label>
+                            <input type="text" id="productName" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productCategory">Categoría</label>
+                            <select id="productCategory" required>
+                                <option value="">Seleccionar categoría</option>
+                                <option value="Electrónicos">Electrónicos</option>
+                                <option value="Ropa">Ropa</option>
+                                <option value="Hogar">Hogar</option>
+                                <option value="Deportes">Deportes</option>
+                                <option value="Libros">Libros</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="productQuantity">Cantidad</label>
+                            <input type="number" id="productQuantity" min="1" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="productPrice">Precio ($)</label>
+                            <input type="number" id="productPrice" step="0.01" min="0" required>
+                        </div>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Agregar Producto</button>
+                </form>
+            </div>
+
+            <div id="list" class="tab-content">
+                <h2>📋 Lista de Productos</h2>
+                <div id="editForm" class="edit-form" style="display: none;">
+                    <h3>✏️ Editar Producto</h3>
+                    <div class="form-grid">
+                        <div class="form-group">
+                            <label for="editName">Nombre</label>
+                            <input type="text" id="editName">
+                        </div>
+                        <div class="form-group">
+                            <label for="editCategory">Categoría</label>
+                            <select id="editCategory">
+                                <option value="Electrónicos">Electrónicos</option>
+                                <option value="Ropa">Ropa</option>
+                                <option value="Hogar">Hogar</option>
+                                <option value="Deportes">Deportes</option>
+                                <option value="Libros">Libros</option>
+                                <option value="Otros">Otros</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editQuantity">Cantidad</label>
+                            <input type="number" id="editQuantity" min="1">
+                        </div>
+                        <div class="form-group">
+                            <label for="editPrice">Precio</label>
+                            <input type="number" id="editPrice" step="0.01" min="0">
+                        </div>
+                    </div>
+                    <div class="actions">
+                        <button onclick="saveEdit()" class="btn btn-primary">Guardar</button>
+                        <button onclick="cancelEdit()" class="btn btn-secondary">Cancelar</button>
+                    </div>
+                </div>
+                <table class="products-table">
+                    <thead>
+                        <tr>
+                            <th>Nombre</th>
+                            <th>Categoría</th>
+                            <th>Cantidad</th>
+                            <th>Precio</th>
+                            <th>Fecha Agregado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="productsTableBody">
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="main.js"></script>
+    <script>
+    // Verificar si está logueado
+    if (localStorage.getItem("logueado") !== "true") {
+      // Si no pasó por el login, lo mando para atrás
+      window.location.href = "login.html";
+    }
+    </script>
+</body>
+</html>
