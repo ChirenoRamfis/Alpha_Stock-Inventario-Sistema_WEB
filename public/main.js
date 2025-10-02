@@ -1,208 +1,351 @@
-let products = [
-            /*{ id: 1, name: 'Laptop HP Pavilion', category: 'Electrónicos', quantity: 15, price: 899.99, dateAdded: '2024-09-10' },
-            { id: 2, name: 'Mouse Logitech', category: 'Electrónicos', quantity: 50, price: 29.99, dateAdded: '2024-09-12' },
-            { id: 3, name: 'Teclado Mecánico', category: 'Electrónicos', quantity: 25, price: 89.99, dateAdded: '2024-09-14' },
-            { id: 4, name: 'Silla Ergonómica', category: 'Hogar', quantity: 8, price: 199.99, dateAdded: '2024-09-11' }*/
-        ];
+// Variables globales
+let products = [];
+let categories = [];
+let editingProductIndex = null;
+let editingCategoryIndex = null;
 
-        let editingProductId = null;
+// Inicializar categorías por defecto
+function initializeDefaultCategories() {
+  const defaultCategories = [
+    "Electrónicos",
+    "Ropa",
+    "Hogar",
+    "Deportes",
+    "Libros",
+    "Otros",
+  ];
+  const storedCategories = JSON.parse(
+    localStorage.getItem("categories") || "[]"
+  );
 
-        function switchTab(tabName) {
-            // Ocultar todos los contenidos
-            document.querySelectorAll('.tab-content').forEach(content => {
-                content.classList.remove('active');
-            });
-            
-            // Quitar clase active de todos los tabs
-            document.querySelectorAll('.tab').forEach(tab => {
-                tab.classList.remove('active');
-            });
-            
-            // Mostrar contenido seleccionado
-            document.getElementById(tabName).classList.add('active');
-            event.target.classList.add('active');
-            
-            if (tabName === 'list') {
-                renderProductsTable();
-            }
-        }
+  if (storedCategories.length === 0) {
+    categories = defaultCategories;
+    saveCategories();
+  } else {
+    categories = storedCategories;
+  }
+}
 
-        function updateStats() {
-            const totalProducts = products.reduce((sum, product) => sum + product.quantity, 0);
-            const totalValue = products.reduce((sum, product) => sum + (product.quantity * product.price), 0);
-            const productTypes = products.length;
-            
-            // Productos de la última semana
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            const recentProducts = products.filter(product => 
-                new Date(product.dateAdded) >= oneWeekAgo
-            ).reduce((sum, product) => sum + product.quantity, 0);
+// Guardar categorías
+function saveCategories() {
+  localStorage.setItem("categories", JSON.stringify(categories));
+  updateCategorySelects();
+  renderCategories();
+}
 
-            document.getElementById('totalProducts').textContent = totalProducts;
-            document.getElementById('recentProducts').textContent = recentProducts;
-            document.getElementById('totalValue').textContent = '$' + totalValue.toLocaleString('es-ES', {minimumFractionDigits: 2});
-            document.getElementById('productTypes').textContent = productTypes;
-        }
+// Renderizar categorías
+function renderCategories() {
+  const grid = document.getElementById("categoriesGrid");
+  grid.innerHTML = "";
 
-        function renderRecentProducts() {
-            const oneWeekAgo = new Date();
-            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
-            
-            const recentProducts = products.filter(product => 
-                new Date(product.dateAdded) >= oneWeekAgo
-            ).sort((a, b) => new Date(b.dateAdded) - new Date(a.dateAdded));
+  if (categories.length === 0) {
+    grid.innerHTML =
+      '<p style="grid-column: 1/-1; text-align: center; color: #666;">No hay categorías creadas. Agrega una nueva categoría.</p>';
+    return;
+  }
 
-            const container = document.getElementById('recentProductsList');
-            
-            if (recentProducts.length === 0) {
-                container.innerHTML = '<p style="color: #666; text-align: center; padding: 20px;">No hay productos agregados recientemente</p>';
-                return;
-            }
+  categories.forEach((category, index) => {
+    const card = document.createElement("div");
+    card.className = "category-card";
+    card.innerHTML = `
+      <div class="category-name">${category}</div>
+      <div class="category-actions">
+        <button onclick="editCategory(${index})" class="btn btn-edit btn-small">Editar</button>
+        <button onclick="deleteCategory(${index})" class="btn btn-danger btn-small">Eliminar</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
 
-            container.innerHTML = recentProducts.map(product => `
-                <div class="recent-item">
-                    <div>
-                        <strong>${product.name}</strong>
-                        <br>
-                        <small style="color: #666;">${product.category} - Cantidad: ${product.quantity}</small>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-weight: bold; color: #667eea;">$${product.price.toFixed(2)}</div>
-                        <small style="color: #666;">${formatDate(product.dateAdded)}</small>
-                    </div>
-                </div>
-            `).join('');
-        }
+// Actualizar selects de categorías
+function updateCategorySelects() {
+  const selects = [
+    document.getElementById("productCategory"),
+    document.getElementById("editCategory"),
+  ];
 
-        function renderProductsTable() {
-            const tbody = document.getElementById('productsTableBody');
-            tbody.innerHTML = products.map(product => `
-                <tr>
-                    <td><strong>${product.name}</strong></td>
-                    <td><span style="background: #e3f2fd; padding: 4px 8px; border-radius: 4px; font-size: 12px;">${product.category}</span></td>
-                    <td>${product.quantity}</td>
-                    <td>$${product.price.toFixed(2)}</td>
-                    <td>${formatDate(product.dateAdded)}</td>
-                    <td class="actions">
-                        <button onclick="editProduct(${product.id})" class="btn btn-secondary" style="padding: 6px 12px; font-size: 14px;">✏️ Editar</button>
-                        <button onclick="deleteProduct(${product.id})" class="btn btn-danger" style="padding: 6px 12px; font-size: 14px;">🗑️ Eliminar</button>
-                    </td>
-                </tr>
-            `).join('');
-        }
+  selects.forEach((select) => {
+    if (!select) return;
 
-        function formatDate(dateString) {
-            const date = new Date(dateString);
-            return date.toLocaleDateString('es-ES', {
-                year: 'numeric',
-                month: 'short',
-                day: 'numeric'
-            });
-        }
+    const currentValue = select.value;
+    select.innerHTML = '<option value="">Seleccionar categoría</option>';
 
-        function addProduct(event) {
-            event.preventDefault();
-            
-            const name = document.getElementById('productName').value;
-            const category = document.getElementById('productCategory').value;
-            const quantity = parseInt(document.getElementById('productQuantity').value);
-            const price = parseFloat(document.getElementById('productPrice').value);
-            
-            if (!name || !category || !quantity || !price) {
-                alert('Por favor complete todos los campos');
-                return;
-            }
+    categories.forEach((category) => {
+      const option = document.createElement("option");
+      option.value = category;
+      option.textContent = category;
+      select.appendChild(option);
+    });
 
-            const newProduct = {
-                id: Date.now(),
-                name,
-                category,
-                quantity,
-                price,
-                dateAdded: new Date().toISOString().split('T')[0]
-            };
+    if (currentValue && categories.includes(currentValue)) {
+      select.value = currentValue;
+    }
+  });
+}
 
-            products.push(newProduct);
-            
-            // Limpiar formulario
-            document.getElementById('productForm').reset();
-            
-            // Actualizar estadísticas y listas
-            updateStats();
-            renderRecentProducts();
-            
-            alert('Producto agregado exitosamente!');
-        }
+// Agregar categoría
+document
+  .getElementById("categoryForm")
+  .addEventListener("submit", function (e) {
+    e.preventDefault();
+    const categoryName = document.getElementById("categoryName").value.trim();
 
-        function editProduct(id) {
-            const product = products.find(p => p.id === id);
-            if (!product) return;
+    if (categoryName === "") {
+      alert("Por favor ingresa un nombre de categoría");
+      return;
+    }
 
-            editingProductId = id;
-            
-            document.getElementById('editName').value = product.name;
-            document.getElementById('editCategory').value = product.category;
-            document.getElementById('editQuantity').value = product.quantity;
-            document.getElementById('editPrice').value = product.price;
-            
-            document.getElementById('editForm').style.display = 'block';
-            document.getElementById('editForm').scrollIntoView({ behavior: 'smooth' });
-        }
+    if (categories.includes(categoryName)) {
+      alert("Esta categoría ya existe");
+      return;
+    }
 
-        function saveEdit() {
-            if (!editingProductId) return;
-            
-            const productIndex = products.findIndex(p => p.id === editingProductId);
-            if (productIndex === -1) return;
+    categories.push(categoryName);
+    saveCategories();
+    document.getElementById("categoryName").value = "";
+    alert("Categoría agregada exitosamente");
+  });
 
-            const name = document.getElementById('editName').value;
-            const category = document.getElementById('editCategory').value;
-            const quantity = parseInt(document.getElementById('editQuantity').value);
-            const price = parseFloat(document.getElementById('editPrice').value);
+// Editar categoría
+function editCategory(index) {
+  editingCategoryIndex = index;
+  document.getElementById("editCategoryName").value = categories[index];
+  document.getElementById("editCategoryForm").style.display = "block";
+}
 
-            if (!name || !category || !quantity || !price) {
-                alert('Por favor complete todos los campos');
-                return;
-            }
+function saveCategoryEdit() {
+  const newName = document.getElementById("editCategoryName").value.trim();
 
-            products[productIndex] = {
-                ...products[productIndex],
-                name,
-                category,
-                quantity,
-                price
-            };
+  if (newName === "") {
+    alert("El nombre de la categoría no puede estar vacío");
+    return;
+  }
 
-            cancelEdit();
-            renderProductsTable();
-            updateStats();
-            renderRecentProducts();
-            
-            alert('Producto actualizado exitosamente!');
-        }
+  if (
+    categories.includes(newName) &&
+    categories[editingCategoryIndex] !== newName
+  ) {
+    alert("Ya existe una categoría con este nombre");
+    return;
+  }
 
-        function cancelEdit() {
-            editingProductId = null;
-            document.getElementById('editForm').style.display = 'none';
-        }
+  const oldName = categories[editingCategoryIndex];
+  categories[editingCategoryIndex] = newName;
 
-        function deleteProduct(id) {
-            if (confirm('¿Está seguro de que desea eliminar este producto?')) {
-                products = products.filter(p => p.id !== id);
-                renderProductsTable();
-                updateStats();
-                renderRecentProducts();
-                alert('Producto eliminado exitosamente!');
-            }
-        }
+  // Actualizar productos que usan esta categoría
+  products.forEach((product) => {
+    if (product.category === oldName) {
+      product.category = newName;
+    }
+  });
 
-        // Event Listeners
-        document.getElementById('productForm').addEventListener('submit', addProduct);
+  saveProducts();
+  saveCategories();
+  cancelCategoryEdit();
+  alert("Categoría actualizada exitosamente");
+}
 
-        // Inicializar la aplicación
-        document.addEventListener('DOMContentLoaded', function() {
-            updateStats();
-            renderRecentProducts();
-            renderProductsTable();
-        });
+function cancelCategoryEdit() {
+  editingCategoryIndex = null;
+  document.getElementById("editCategoryForm").style.display = "none";
+  document.getElementById("editCategoryName").value = "";
+}
+
+// Eliminar categoría
+function deleteCategory(index) {
+  const categoryName = categories[index];
+  const productsWithCategory = products.filter(
+    (p) => p.category === categoryName
+  );
+
+  if (productsWithCategory.length > 0) {
+    if (
+      !confirm(
+        `Hay ${productsWithCategory.length} producto(s) con esta categoría. ¿Deseas eliminarla de todos modos? Los productos se moverán a "Sin categoría".`
+      )
+    ) {
+      return;
+    }
+
+    products.forEach((product) => {
+      if (product.category === categoryName) {
+        product.category = "Sin categoría";
+      }
+    });
+
+    if (!categories.includes("Sin categoría")) {
+      categories.push("Sin categoría");
+    }
+
+    saveProducts();
+  }
+
+  categories.splice(index, 1);
+  saveCategories();
+  alert("Categoría eliminada exitosamente");
+}
+
+// Funciones de productos
+function loadProducts() {
+  const stored = localStorage.getItem("products");
+  products = stored ? JSON.parse(stored) : [];
+  renderProducts();
+  updateStats();
+}
+
+function saveProducts() {
+  localStorage.setItem("products", JSON.stringify(products));
+  renderProducts();
+  updateStats();
+}
+
+function renderProducts() {
+  const tbody = document.getElementById("productsTableBody");
+  tbody.innerHTML = "";
+
+  products.forEach((product, index) => {
+    const row = tbody.insertRow();
+    row.innerHTML = `
+      <td>${product.name}</td>
+      <td>${product.category}</td>
+      <td>${product.quantity}</td>
+      <td>$${parseFloat(product.price).toFixed(2)}</td>
+      <td>${new Date(product.dateAdded).toLocaleDateString()}</td>
+      <td>
+        <div class="actions">
+          <button onclick="editProduct(${index})" class="btn btn-secondary btn-small">Editar</button>
+          <button onclick="deleteProduct(${index})" class="btn btn-danger btn-small">Eliminar</button>
+        </div>
+      </td>
+    `;
+  });
+
+  renderRecentProducts();
+}
+
+function renderRecentProducts() {
+  const container = document.getElementById("recentProductsList");
+  const recent = products.slice(-5).reverse();
+
+  if (recent.length === 0) {
+    container.innerHTML =
+      '<p style="color: #666;">No hay productos recientes</p>';
+    return;
+  }
+
+  container.innerHTML = recent
+    .map(
+      (product) => `
+    <div class="recent-item">
+      <div>
+        <strong>${product.name}</strong><br>
+        <small>${product.category} - $${parseFloat(product.price).toFixed(
+        2
+      )}</small>
+      </div>
+      <div>${new Date(product.dateAdded).toLocaleDateString()}</div>
+    </div>
+  `
+    )
+    .join("");
+}
+
+function updateStats() {
+  document.getElementById("totalProducts").textContent = products.length;
+
+  const weekAgo = new Date();
+  weekAgo.setDate(weekAgo.getDate() - 7);
+  const recentCount = products.filter(
+    (p) => new Date(p.dateAdded) > weekAgo
+  ).length;
+  document.getElementById("recentProducts").textContent = recentCount;
+
+  const totalValue = products.reduce(
+    (sum, p) => sum + parseFloat(p.price) * parseInt(p.quantity),
+    0
+  );
+  document.getElementById("totalValue").textContent = `$${totalValue.toFixed(
+    2
+  )}`;
+
+  const uniqueCategories = [...new Set(products.map((p) => p.category))];
+  document.getElementById("productTypes").textContent = uniqueCategories.length;
+}
+
+document.getElementById("productForm").addEventListener("submit", function (e) {
+  e.preventDefault();
+
+  const product = {
+    name: document.getElementById("productName").value,
+    category: document.getElementById("productCategory").value,
+    quantity: document.getElementById("productQuantity").value,
+    price: document.getElementById("productPrice").value,
+    dateAdded: new Date().toISOString(),
+  };
+
+  products.push(product);
+  saveProducts();
+  this.reset();
+  alert("Producto agregado exitosamente");
+});
+
+function editProduct(index) {
+  editingProductIndex = index;
+  const product = products[index];
+
+  document.getElementById("editName").value = product.name;
+  document.getElementById("editCategory").value = product.category;
+  document.getElementById("editQuantity").value = product.quantity;
+  document.getElementById("editPrice").value = product.price;
+  document.getElementById("editForm").style.display = "block";
+}
+
+function saveEdit() {
+  if (editingProductIndex === null) return;
+
+  products[editingProductIndex] = {
+    name: document.getElementById("editName").value,
+    category: document.getElementById("editCategory").value,
+    quantity: document.getElementById("editQuantity").value,
+    price: document.getElementById("editPrice").value,
+    dateAdded: products[editingProductIndex].dateAdded,
+  };
+
+  saveProducts();
+  cancelEdit();
+  alert("Producto actualizado exitosamente");
+}
+
+function cancelEdit() {
+  editingProductIndex = null;
+  document.getElementById("editForm").style.display = "none";
+}
+
+function deleteProduct(index) {
+  if (confirm("¿Estás seguro de eliminar este producto?")) {
+    products.splice(index, 1);
+    saveProducts();
+    alert("Producto eliminado exitosamente");
+  }
+}
+
+function switchTab(tabName) {
+  document
+    .querySelectorAll(".tab")
+    .forEach((tab) => tab.classList.remove("active"));
+  document
+    .querySelectorAll(".tab-content")
+    .forEach((content) => content.classList.remove("active"));
+
+  event.target.classList.add("active");
+  document.getElementById(tabName).classList.add("active");
+}
+
+// Inicializar
+window.onload = function () {
+  initializeDefaultCategories();
+  updateCategorySelects();
+  renderCategories();
+  loadProducts();
+};
