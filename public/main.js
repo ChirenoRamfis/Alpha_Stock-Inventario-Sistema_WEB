@@ -445,7 +445,25 @@ function renderProducts() {
   const tbody = document.getElementById("productsTableBody");
   tbody.innerHTML = "";
 
-  products.forEach((product, index) => {
+  // Si no hay searchTerm, lo ponemos vacío
+  const term =
+    typeof searchTerm !== "undefined" ? searchTerm.toLowerCase() : "";
+
+  // Filtrar productos
+  const filteredProducts = products.filter((product) => {
+    return (
+      product.name.toLowerCase().includes(term) ||
+      product.category.toLowerCase().includes(term) ||
+      (product.description &&
+        product.description.toLowerCase().includes(term)) ||
+      (product.tags &&
+        product.tags.some((tag) => tag.toLowerCase().includes(term))) ||
+      product.price.toString().includes(term) ||
+      product.quantity.toString().includes(term)
+    );
+  });
+
+  filteredProducts.forEach((product, index) => {
     const row = tbody.insertRow();
     const tagsHTML =
       product.tags && product.tags.length > 0
@@ -459,20 +477,20 @@ function renderProducts() {
       : '<span style="color: #999;">Sin descripción</span>';
 
     row.innerHTML = `
-            <td><strong>${product.name}</strong></td>
-            <td>${product.category}</td>
-            <td>${descriptionHTML}</td>
-            <td>${tagsHTML}</td>
-            <td>${product.quantity}</td>
-            <td>${parseFloat(product.price).toFixed(2)}</td>
-            <td>${new Date(product.dateAdded).toLocaleDateString()}</td>
-            <td>
-              <div class="actions">
-                <button onclick="editProduct(${index})" class="btn btn-secondary btn-small">Editar</button>
-                <button onclick="deleteProduct(${index})" class="btn btn-danger btn-small">Eliminar</button>
-              </div>
-            </td>
-          `;
+      <td><strong>${product.name}</strong></td>
+      <td>${product.category}</td>
+      <td>${descriptionHTML}</td>
+      <td>${tagsHTML}</td>
+      <td>${product.quantity}</td>
+      <td>${parseFloat(product.price).toFixed(2)}</td>
+      <td>${new Date(product.dateAdded).toLocaleDateString()}</td>
+      <td>
+        <div class="actions">
+          <button onclick="editProduct(${index})" class="btn btn-secondary btn-small">Editar</button>
+          <button onclick="deleteProduct(${index})" class="btn btn-danger btn-small">Eliminar</button>
+        </div>
+      </td>
+    `;
   });
 
   renderRecentProducts();
@@ -644,4 +662,11 @@ window.onload = function () {
     "editTagSuggestions",
     editSelectedTags
   );
+
+  // Configurar buscador
+  const searchInput = document.getElementById("searchInput");
+  searchInput.addEventListener("input", function (e) {
+    searchTerm = e.target.value.trim();
+    renderProducts();
+  });
 };

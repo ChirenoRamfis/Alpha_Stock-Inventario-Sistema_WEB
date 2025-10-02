@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="main.css" />
     <title>Sistema de Inventario</title>
-    <style></style>
   </head>
   <body>
     <div class="container">
@@ -215,6 +214,18 @@
 
         <div id="list" class="tab-content">
           <h2>📋 Lista de Productos</h2>
+
+          <div class="search-container">
+            <div class="form-group">
+              <label for="searchInput">🔍 Buscar Productos</label>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Buscar por nombre, categoría, descripción, etiquetas, precio o cantidad..."
+              />
+            </div>
+          </div>
+
           <div id="editForm" class="edit-form" style="display: none">
             <h3>✏️ Editar Producto</h3>
             <div class="form-grid">
