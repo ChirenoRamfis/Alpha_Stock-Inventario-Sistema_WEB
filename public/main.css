@@ -137,16 +137,24 @@ body {
 }
 
 .form-group input,
-.form-group select {
+.form-group select,
+.form-group textarea {
   padding: 12px;
   border: 2px solid #e0e0e0;
   border-radius: 8px;
   font-size: 16px;
   transition: border-color 0.3s ease;
+  font-family: inherit;
+}
+
+.form-group textarea {
+  min-height: 100px;
+  resize: vertical;
 }
 
 .form-group input:focus,
-.form-group select:focus {
+.form-group select:focus,
+.form-group textarea:focus {
   outline: none;
   border-color: #667eea;
 }
@@ -220,6 +228,7 @@ body {
 .products-table td {
   padding: 15px;
   border-bottom: 1px solid #f0f0f0;
+  vertical-align: top;
 }
 
 .products-table tr:hover {
@@ -242,8 +251,8 @@ body {
 .recent-item {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  padding: 10px 0;
+  align-items: flex-start;
+  padding: 15px 0;
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -251,9 +260,14 @@ body {
   border-bottom: none;
 }
 
+.recent-item-content {
+  flex: 1;
+}
+
 .actions {
   display: flex;
   gap: 10px;
+  flex-wrap: wrap;
 }
 
 .edit-form {
@@ -263,56 +277,80 @@ body {
   margin-bottom: 20px;
 }
 
-.categories-grid {
+.categories-tags-container {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 15px;
+  grid-template-columns: 1fr 1fr;
+  gap: 30px;
   margin-top: 20px;
 }
 
-.category-card {
+@media (max-width: 768px) {
+  .categories-tags-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.section {
   background: white;
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 3px 10px rgba(0, 0, 0, 0.08);
+}
+
+.section h3 {
+  margin-bottom: 15px;
+  color: #333;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 15px;
+}
+
+.item-card {
+  background: #f8f9ff;
+  padding: 15px;
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   transition: transform 0.3s ease;
 }
 
-.category-card:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.12);
+.item-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
 }
 
-.category-name {
-  font-size: 1.2em;
+.item-name {
+  font-size: 1.1em;
   font-weight: 600;
   color: #333;
 }
 
-.category-actions {
+.item-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 10px;
+  gap: 6px;
 }
 
 .btn-small {
-  padding: 8px 16px;
-  font-size: 14px;
+  padding: 6px 12px;
+  font-size: 13px;
 }
 
-.add-category-form {
+.add-form {
   background: #f8f9ff;
-  padding: 20px;
-  border-radius: 10px;
-  margin-bottom: 20px;
+  padding: 15px;
+  border-radius: 8px;
+  margin-bottom: 15px;
 }
 
-.add-category-form h3 {
-  margin-bottom: 15px;
+.add-form h4 {
+  margin-bottom: 10px;
   color: #333;
+  font-size: 1em;
 }
 
 .inline-form {
@@ -323,4 +361,100 @@ body {
 
 .inline-form .form-group {
   flex: 1;
+}
+
+.tags-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 5px;
+}
+
+.tag {
+  background: linear-gradient(135deg, #667eea, #764ba2);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 15px;
+  font-size: 0.85em;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tag-remove {
+  cursor: pointer;
+  font-weight: bold;
+  margin-left: 3px;
+}
+
+.tag-remove:hover {
+  color: #ffcccc;
+}
+
+.tag-input-container {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  min-height: 45px;
+  align-items: center;
+}
+
+.tag-input-container:focus-within {
+  border-color: #667eea;
+}
+
+.tag-input-container input {
+  border: none;
+  padding: 5px;
+  flex: 1;
+  min-width: 150px;
+  outline: none;
+}
+
+.selected-tag {
+  background: #667eea;
+  color: white;
+  padding: 4px 10px;
+  border-radius: 12px;
+  font-size: 0.85em;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tag-suggestions {
+  position: absolute;
+  background: white;
+  border: 2px solid #667eea;
+  border-radius: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  z-index: 10;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  margin-top: 5px;
+  width: 100%;
+}
+
+.tag-suggestion {
+  padding: 10px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.tag-suggestion:hover {
+  background: #f8f9ff;
+}
+
+.product-description {
+  font-size: 0.9em;
+  color: #666;
+  margin-top: 5px;
+  line-height: 1.4;
+}
+
+.full-width {
+  grid-column: 1 / -1;
 }

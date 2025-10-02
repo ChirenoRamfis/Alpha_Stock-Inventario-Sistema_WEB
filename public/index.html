@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="main.css" />
     <title>Sistema de Inventario</title>
+    <style></style>
   </head>
   <body>
     <div class="container">
@@ -42,7 +43,7 @@
             Dashboard
           </button>
           <button class="tab" onclick="switchTab('categories')">
-            Categorías
+            Categorías y Etiquetas
           </button>
           <button class="tab" onclick="switchTab('add')">
             Agregar Producto
@@ -60,41 +61,99 @@
         </div>
 
         <div id="categories" class="tab-content">
-          <h2>🏷️ Gestión de Categorías</h2>
+          <h2>🏷️ Gestión de Categorías y Etiquetas</h2>
 
-          <div class="add-category-form">
-            <h3>➕ Agregar Nueva Categoría</h3>
-            <form id="categoryForm" class="inline-form">
-              <div class="form-group">
-                <label for="categoryName">Nombre de la Categoría</label>
-                <input
-                  type="text"
-                  id="categoryName"
-                  required
-                  placeholder="Ej: Electrónicos, Ropa, etc."
-                />
+          <div class="categories-tags-container">
+            <div class="section">
+              <h3>📁 Categorías</h3>
+              <div class="add-form">
+                <h4>➕ Agregar Categoría</h4>
+                <form id="categoryForm" class="inline-form">
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      id="categoryName"
+                      required
+                      placeholder="Nombre de la categoría"
+                    />
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-small">
+                    Agregar
+                  </button>
+                </form>
               </div>
-              <button type="submit" class="btn btn-primary">Agregar</button>
-            </form>
-          </div>
 
-          <div id="editCategoryForm" class="edit-form" style="display: none">
-            <h3>✏️ Editar Categoría</h3>
-            <div class="inline-form">
-              <div class="form-group">
-                <label for="editCategoryName">Nombre</label>
-                <input type="text" id="editCategoryName" />
+              <div
+                id="editCategoryForm"
+                class="edit-form"
+                style="display: none"
+              >
+                <h4>✏️ Editar Categoría</h4>
+                <div class="inline-form">
+                  <div class="form-group">
+                    <input type="text" id="editCategoryName" />
+                  </div>
+                  <button
+                    onclick="saveCategoryEdit()"
+                    class="btn btn-primary btn-small"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onclick="cancelCategoryEdit()"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Cancelar
+                  </button>
+                </div>
               </div>
-              <button onclick="saveCategoryEdit()" class="btn btn-primary">
-                Guardar
-              </button>
-              <button onclick="cancelCategoryEdit()" class="btn btn-secondary">
-                Cancelar
-              </button>
+
+              <div class="items-grid" id="categoriesGrid"></div>
+            </div>
+
+            <div class="section">
+              <h3>🏷️ Etiquetas</h3>
+              <div class="add-form">
+                <h4>➕ Agregar Etiqueta</h4>
+                <form id="tagForm" class="inline-form">
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      id="tagName"
+                      required
+                      placeholder="Nombre de la etiqueta"
+                    />
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-small">
+                    Agregar
+                  </button>
+                </form>
+              </div>
+
+              <div id="editTagForm" class="edit-form" style="display: none">
+                <h4>✏️ Editar Etiqueta</h4>
+                <div class="inline-form">
+                  <div class="form-group">
+                    <input type="text" id="editTagName" />
+                  </div>
+                  <button
+                    onclick="saveTagEdit()"
+                    class="btn btn-primary btn-small"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onclick="cancelTagEdit()"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+              <div class="items-grid" id="tagsGrid"></div>
             </div>
           </div>
-
-          <div class="categories-grid" id="categoriesGrid"></div>
         </div>
 
         <div id="add" class="tab-content">
@@ -125,6 +184,28 @@
                   required
                 />
               </div>
+              <div class="form-group full-width">
+                <label for="productDescription">Descripción</label>
+                <textarea
+                  id="productDescription"
+                  placeholder="Descripción del producto (opcional)"
+                ></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>Etiquetas</label>
+                <div class="tag-input-container" id="productTagsContainer">
+                  <input
+                    type="text"
+                    id="productTagInput"
+                    placeholder="Escribe para buscar etiquetas..."
+                  />
+                </div>
+                <div
+                  id="tagSuggestions"
+                  class="tag-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
             </div>
             <button type="submit" class="btn btn-primary">
               Agregar Producto
@@ -153,6 +234,25 @@
                 <label for="editPrice">Precio</label>
                 <input type="number" id="editPrice" step="0.01" min="0" />
               </div>
+              <div class="form-group full-width">
+                <label for="editDescription">Descripción</label>
+                <textarea id="editDescription"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>Etiquetas</label>
+                <div class="tag-input-container" id="editTagsContainer">
+                  <input
+                    type="text"
+                    id="editTagInput"
+                    placeholder="Escribe para buscar etiquetas..."
+                  />
+                </div>
+                <div
+                  id="editTagSuggestions"
+                  class="tag-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
             </div>
             <div class="actions">
               <button onclick="saveEdit()" class="btn btn-primary">
@@ -168,9 +268,11 @@
               <tr>
                 <th>Nombre</th>
                 <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Etiquetas</th>
                 <th>Cantidad</th>
                 <th>Precio</th>
-                <th>Fecha Agregado</th>
+                <th>Fecha</th>
                 <th>Acciones</th>
               </tr>
             </thead>
@@ -179,13 +281,7 @@
         </div>
       </div>
     </div>
+
     <script src="main.js"></script>
-    <script>
-      // Verificar si está logueado
-      if (localStorage.getItem("logueado") !== "true") {
-        // Si no pasó por el login, lo mando para atrás
-        window.location.href = "login.html";
-      }
-    </script>
   </body>
 </html>
