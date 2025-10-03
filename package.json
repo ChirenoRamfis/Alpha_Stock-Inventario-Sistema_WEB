@@ -1,0 +1,23 @@
+{
+  "name": "alpha_stock-inventario-sistema_web",
+  "version": "1.0.0",
+  "description": "Sistema de inventario WEB para el manejo de ropa de negocios",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ChirenoRamfis/Alpha_Stock-Inventario-Sistema_WEB.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ChirenoRamfis/Alpha_Stock-Inventario-Sistema_WEB/issues"
+  },
+  "homepage": "https://github.com/ChirenoRamfis/Alpha_Stock-Inventario-Sistema_WEB#readme",
+  "dependencies": {
+    "sqlite3": "^5.1.7"
+  }
+}
