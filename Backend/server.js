@@ -1,32 +1,45 @@
 const express = require('express');
+const sqlite3 = require('sqlite3').verbose();
 const path = require('path');
-const bodyParser = require('body-parser');
-
-const categoriasRouter = require('./routes/categorias');
-const etiquetasRouter = require('./routes/etiquetas');
-const productosRouter = require('./routes/productos');
-const authRouter = require('./routes/auth');
 
 const app = express();
-const PORT = process.env.PORT || 3000;
+const PORT = 3000;
 
-app.use(bodyParser.json());
-app.use(bodyParser.urlencoded({ extended: true }));
+// Middleware para leer JSON y formularios
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// Serve frontend static files (assumes your frontend public folder is ../public relative to this backend)
-app.use(express.static(path.join(__dirname, '..', 'public')));
 
-// API routes
-app.use('/api/categorias', categoriasRouter);
-app.use('/api/etiquetas', etiquetasRouter);
-app.use('/api/productos', productosRouter);
-app.use('/api/auth', authRouter);
-
-// Fallback to index.html for SPA or simple frontend navigation
-app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
+// Conexión a la base de datos
+const db = new sqlite3.Database('inventario.db', (err) => {
+  if (err) console.error('Error al conectar con la base de datos:', err.message);
+  else console.log('✅ Conectado a la base de datos SQLite.');
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+// Ruta de login real
+app.post('/login', (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password)
+    return res.status(400).json({ error: 'Usuario y contraseña requeridos.' });
+
+  const sql = 'SELECT * FROM usuarios WHERE username = ? AND password = ?';
+  db.get(sql, [username, password], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Error en la base de datos.' });
+    if (!row) return res.status(401).json({ error: 'Credenciales incorrectas.' });
+    
+    res.json({ success: true, message: `Bienvenido ${row.username}` });
+  });
 });
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, '../Frontend', 'login.html'));
+});
+
+
+// Servir archivos del frontend
+app.use(express.static(path.join(__dirname, '../Frontend')));
+
+
+// Iniciar el servidor
+app.listen(PORT, () => console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`));
