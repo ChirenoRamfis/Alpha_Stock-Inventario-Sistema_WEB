@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="main.css" />
+    <title>Sistema de Inventario</title>
+  </head>
+  <body>
+    <div class="container">
+      <div class="header">
+        <h1>📦 Alpha Stock - Sistema de Inventario</h1>
+        <p>Bienvenida Carolina</p>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📊</div>
+          <div class="stat-number" id="totalProducts">0</div>
+          <div class="stat-label">Total Productos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-number" id="recentProducts">0</div>
+          <div class="stat-label">Agregados Esta Semana</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">💰</div>
+          <div class="stat-number" id="totalValue">$0</div>
+          <div class="stat-label">Valor Total Inventario</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📦</div>
+          <div class="stat-number" id="productTypes">0</div>
+          <div class="stat-label">Tipos de Productos</div>
+        </div>
+      </div>
+
+      <div class="main-content">
+        <div class="tabs">
+          <button class="tab active" onclick="switchTab('dashboard')">
+            Dashboard
+          </button>
+          <button class="tab" onclick="switchTab('categories')">
+            Categorías y Etiquetas
+          </button>
+          <button class="tab" onclick="switchTab('add')">
+            Agregar Producto
+          </button>
+          <button class="tab" onclick="switchTab('list')">
+            Lista de Productos
+          </button>
+        </div>
+
+        <div id="dashboard" class="tab-content active">
+          <div class="recent-products">
+            <h3>🕐 Productos Agregados Recientemente</h3>
+            <div id="recentProductsList"></div>
+          </div>
+        </div>
+
+        <div id="categories" class="tab-content">
+          <h2>🏷️ Gestión de Categorías y Etiquetas</h2>
+
+          <div class="categories-tags-container">
+            <div class="section">
+              <h3>📁 Categorías</h3>
+              <div class="add-form">
+                <h4>➕ Agregar Categoría</h4>
+                <form id="categoryForm" class="inline-form">
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      id="categoryName"
+                      required
+                      placeholder="Nombre de la categoría"
+                    />
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-small">
+                    Agregar
+                  </button>
+                </form>
+              </div>
+
+              <div
+                id="editCategoryForm"
+                class="edit-form"
+                style="display: none"
+              >
+                <h4>✏️ Editar Categoría</h4>
+                <div class="inline-form">
+                  <div class="form-group">
+                    <input type="text" id="editCategoryName" />
+                  </div>
+                  <button
+                    onclick="saveCategoryEdit()"
+                    class="btn btn-primary btn-small"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onclick="cancelCategoryEdit()"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+              <div class="items-grid" id="categoriesGrid"></div>
+            </div>
+
+            <div class="section">
+              <h3>🏷️ Etiquetas</h3>
+              <div class="add-form">
+                <h4>➕ Agregar Etiqueta</h4>
+                <form id="tagForm" class="inline-form">
+                  <div class="form-group">
+                    <input
+                      type="text"
+                      id="tagName"
+                      required
+                      placeholder="Nombre de la etiqueta"
+                    />
+                  </div>
+                  <button type="submit" class="btn btn-primary btn-small">
+                    Agregar
+                  </button>
+                </form>
+              </div>
+
+              <div id="editTagForm" class="edit-form" style="display: none">
+                <h4>✏️ Editar Etiqueta</h4>
+                <div class="inline-form">
+                  <div class="form-group">
+                    <input type="text" id="editTagName" />
+                  </div>
+                  <button
+                    onclick="saveTagEdit()"
+                    class="btn btn-primary btn-small"
+                  >
+                    Guardar
+                  </button>
+                  <button
+                    onclick="cancelTagEdit()"
+                    class="btn btn-secondary btn-small"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </div>
+
+              <div class="items-grid" id="tagsGrid"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="add" class="tab-content">
+          <h2>➕ Agregar Nuevo Producto</h2>
+          <form id="productForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="productName">Nombre del Producto</label>
+                <input type="text" id="productName" required />
+              </div>
+              <div class="form-group">
+                <label for="productCategory">Categoría</label>
+                <select id="productCategory" required>
+                  <option value="">Seleccionar categoría</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="productQuantity">Cantidad</label>
+                <input type="number" id="productQuantity" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="productPrice">Precio ($)</label>
+                <input
+                  type="number"
+                  id="productPrice"
+                  step="0.01"
+                  min="0"
+                  required
+                />
+              </div>
+              <div class="form-group full-width">
+                <label for="productDescription">Descripción</label>
+                <textarea
+                  id="productDescription"
+                  placeholder="Descripción del producto (opcional)"
+                ></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>Etiquetas</label>
+                <div class="tag-input-container" id="productTagsContainer">
+                  <input
+                    type="text"
+                    id="productTagInput"
+                    placeholder="Escribe para buscar etiquetas..."
+                  />
+                </div>
+                <div
+                  id="tagSuggestions"
+                  class="tag-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Agregar Producto
+            </button>
+          </form>
+        </div>
+
+        <div id="list" class="tab-content">
+          <h2>📋 Lista de Productos</h2>
+
+          <div class="search-container">
+            <div class="form-group">
+              <label for="searchInput">🔍 Buscar Productos</label>
+              <input
+                type="text"
+                id="searchInput"
+                placeholder="Buscar por nombre, categoría, descripción, etiquetas, precio o cantidad..."
+              />
+            </div>
+          </div>
+
+          <div id="editForm" class="edit-form" style="display: none">
+            <h3>✏️ Editar Producto</h3>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editName">Nombre</label>
+                <input type="text" id="editName" />
+              </div>
+              <div class="form-group">
+                <label for="editCategory">Categoría</label>
+                <select id="editCategory"></select>
+              </div>
+              <div class="form-group">
+                <label for="editQuantity">Cantidad</label>
+                <input type="number" id="editQuantity" min="1" />
+              </div>
+              <div class="form-group">
+                <label for="editPrice">Precio</label>
+                <input type="number" id="editPrice" step="0.01" min="0" />
+              </div>
+              <div class="form-group full-width">
+                <label for="editDescription">Descripción</label>
+                <textarea id="editDescription"></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>Etiquetas</label>
+                <div class="tag-input-container" id="editTagsContainer">
+                  <input
+                    type="text"
+                    id="editTagInput"
+                    placeholder="Escribe para buscar etiquetas..."
+                  />
+                </div>
+                <div
+                  id="editTagSuggestions"
+                  class="tag-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
+            </div>
+            <div class="actions">
+              <button onclick="saveEdit()" class="btn btn-primary">
+                Guardar
+              </button>
+              <button onclick="cancelEdit()" class="btn btn-secondary">
+                Cancelar
+              </button>
+            </div>
+          </div>
+          <table class="products-table">
+            <thead>
+              <tr>
+                <th>Nombre</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Etiquetas</th>
+                <th>Cantidad</th>
+                <th>Precio</th>
+                <th>Fecha</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="productsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
+</html>
