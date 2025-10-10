@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="recuperar_contraseña.css">
+    <title>Recuperar Contraseña</title>
+</head>
+<body>
+    <div class="recovery-container">
+        <div class="recovery-header">
+            <div class="icon">🔐</div>
+            <h1>Recuperar Contraseña</h1>
+            <p>Completa el formulario para restablecer tu contraseña</p>
+        </div>
+
+        <div id="messageContainer"></div>
+
+        <!-- Formulario de recuperación -->
+        <form id="recoveryForm">
+            <div class="form-group">
+                <label for="username">Nombre de Usuario</label>
+                <input type="text" id="username" placeholder="Ingresa tu nombre de usuario" required>
+            </div>
+
+            <div class="form-group">
+                <label id="securityQuestionLabel">Pregunta de Seguridad</label>
+                <input type="text" id="securityAnswer" placeholder="Ingresa tu respuesta" required>
+                <small style="color: #999; font-size: 12px; display: block; margin-top: 5px;">
+                    Primero ingresa tu usuario para ver la pregunta de seguridad
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="newPassword">Nueva Contraseña</label>
+                <input type="password" id="newPassword" placeholder="Ingresa tu nueva contraseña" required>
+            </div>
+
+            <div class="form-group">
+                <label for="confirmPassword">Confirmar Contraseña</label>
+                <input type="password" id="confirmPassword" placeholder="Confirma tu nueva contraseña" required>
+            </div>
+
+            <button type="submit">Cambiar Contraseña</button>
+        </form>
+
+        <!-- Mensaje de éxito -->
+        <div id="successMessage">
+            <div class="icon">✅</div>
+            <h2 style="color: #3c3; margin-bottom: 15px;">¡Contraseña Cambiada!</h2>
+            <p style="color: #666; margin-bottom: 25px;">Tu contraseña ha sido actualizada exitosamente.</p>
+            <button onclick="goToLogin()">Ir al Inicio de Sesión</button>
+        </div>
+
+        <div class="back-link">
+            <a href="login.html" onclick="goToLogin()">← Volver al inicio de sesión</a>
+        </div>
+    </div>
+
+    <script src="recuperar_contraseña.js"></script>
+</body>
+</html>
