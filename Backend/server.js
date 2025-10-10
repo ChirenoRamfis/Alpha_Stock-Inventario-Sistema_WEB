@@ -32,6 +32,49 @@ app.post('/login', (req, res) => {
   });
 });
 
+// ==========================
+// Recuperar contraseña
+// ==========================
+
+// Obtener pregunta de seguridad por usuario
+app.post('/get-question', (req, res) => {
+  const { username } = req.body;
+
+  if (!username)
+    return res.status(400).json({ error: 'Falta el nombre de usuario.' });
+
+  const sql = 'SELECT pregunta_seguridad FROM usuarios WHERE username = ?';
+  db.get(sql, [username], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Error en la base de datos.' });
+    if (!row) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    res.json({ question: row.pregunta_seguridad });
+  });
+});
+
+// Cambiar contraseña
+app.post('/recover-password', (req, res) => {
+  const { username, securityAnswer, newPassword } = req.body;
+
+  if (!username || !securityAnswer || !newPassword)
+    return res.status(400).json({ error: 'Datos incompletos.' });
+
+  const sql = 'SELECT respuesta_seguridad FROM usuarios WHERE username = ?';
+  db.get(sql, [username], (err, row) => {
+    if (err) return res.status(500).json({ error: 'Error en la base de datos.' });
+    if (!row) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    if (row.respuesta_seguridad.toLowerCase() !== securityAnswer.toLowerCase()) {
+      return res.status(401).json({ error: 'Respuesta incorrecta.' });
+    }
+
+    const updateSql = 'UPDATE usuarios SET password = ? WHERE username = ?';
+    db.run(updateSql, [newPassword, username], function (updateErr) {
+      if (updateErr) return res.status(500).json({ error: 'Error al actualizar contraseña.' });
+      res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+    });
+  });
+});
+
 app.get('/', (req, res) => {
   res.sendFile(path.join(__dirname, '../Frontend', 'login.html'));
 });

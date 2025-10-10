@@ -5,7 +5,9 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS usuarios (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT NOT NULL UNIQUE,
-    password TEXT NOT NULL
+    password TEXT NOT NULL,
+    pregunta_seguridad TEXT,
+    respuesta_seguridad TEXT
 );
 
 -- TABLA DE CATEGORÍAS
@@ -45,8 +47,8 @@ CREATE TABLE IF NOT EXISTS producto_etiqueta (
 -- ==============================================
 
 -- Usuario inicial
-INSERT INTO usuarios(username, password)
-VALUES ('admin', '1234');
+INSERT INTO usuarios(username, password, pregunta_seguridad, respuesta_seguridad)
+VALUES ('admin', '1234','¿Como usted se llama?','Carolina');
 
 -- Categorías
 INSERT INTO categorias(nombre) VALUES ('Electrónica');
