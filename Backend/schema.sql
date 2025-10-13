@@ -21,6 +21,7 @@ CREATE TABLE IF NOT EXISTS productos (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nombre TEXT NOT NULL,
     descripcion TEXT,
+    cantidad INTEGER DEFAULT 1,
     precio REAL NOT NULL,
     categoria_id INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
@@ -50,26 +51,4 @@ CREATE TABLE IF NOT EXISTS producto_etiqueta (
 INSERT INTO usuarios(username, password, pregunta_seguridad, respuesta_seguridad)
 VALUES ('admin', '1234','¿Como usted se llama?','Carolina');
 
--- Categorías
-INSERT INTO categorias(nombre) VALUES ('Electrónica');
-INSERT INTO categorias(nombre) VALUES ('Ropa');
 
--- Productos
-INSERT INTO productos(nombre, descripcion, precio, categoria_id)
-VALUES ('Laptop', 'Laptop de 15 pulgadas', 800.00, 1);
-
-INSERT INTO productos(nombre, descripcion, precio, categoria_id)
-VALUES ('Camiseta', 'Camiseta de algodón talla M', 15.00, 2);
-
--- Etiquetas
-INSERT INTO etiquetas(nombre) VALUES ('Oferta');
-INSERT INTO etiquetas(nombre) VALUES ('Nuevo');
-INSERT INTO etiquetas(nombre) VALUES ('Popular');
-
--- Relación producto-etiqueta
--- Laptop con etiquetas "Nuevo" y "Popular"
-INSERT INTO producto_etiqueta(producto_id, etiqueta_id) VALUES (1, 2);
-INSERT INTO producto_etiqueta(producto_id, etiqueta_id) VALUES (1, 3);
-
--- Camiseta con etiqueta "Oferta"
-INSERT INTO producto_etiqueta(producto_id, etiqueta_id) VALUES (2, 1);
