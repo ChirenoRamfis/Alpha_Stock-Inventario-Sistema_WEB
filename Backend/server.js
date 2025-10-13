@@ -200,6 +200,39 @@ app.delete('/api/products/:id', (req, res) => {
   });
 });
 
+// Obtener pregunta de seguridad
+app.post('/get-question', (req, res) => {
+  const { username } = req.body;
+  if (!username) return res.status(400).json({ error: 'Usuario requerido.' });
+
+  db.get('SELECT pregunta_seguridad FROM usuarios WHERE username = ?', [username], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Usuario no encontrado.' });
+    res.json({ question: row.pregunta_seguridad });
+  });
+});
+
+// Recuperar y actualizar contraseña
+app.post('/recover-password', (req, res) => {
+  const { username, securityAnswer, newPassword } = req.body;
+  if (!username || !securityAnswer || !newPassword)
+    return res.status(400).json({ error: 'Todos los campos son requeridos.' });
+
+  db.get('SELECT respuesta_seguridad FROM usuarios WHERE username = ?', [username], (err, row) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!row) return res.status(404).json({ error: 'Usuario no encontrado.' });
+
+    if (row.respuesta_seguridad !== securityAnswer) {
+      return res.status(401).json({ error: 'Respuesta de seguridad incorrecta.' });
+    }
+
+    db.run('UPDATE usuarios SET password = ? WHERE username = ?', [newPassword, username], function(err2) {
+      if (err2) return res.status(500).json({ error: err2.message });
+      res.json({ success: true, message: 'Contraseña actualizada correctamente.' });
+    });
+  });
+});
+
 
 // ---------------------------------
 // Servir archivos estáticos (Frontend)
