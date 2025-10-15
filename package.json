@@ -1,10 +1,11 @@
 {
   "name": "alpha_stock-inventario-sistema_web",
   "version": "1.0.0",
-  "description": "Sistema de inventario WEB para el manejo de ropa de negocios",
-  "main": "index.js",
+  "description": "Sistema de inventario de ropa de negocios en versión app de escritorio",
+  "main": "main.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "electron .",
+    "pack": "electron-packager . AlphaStock --platform=win32 --arch=x64 --out=dist --overwrite"
   },
   "repository": {
     "type": "git",
@@ -21,5 +22,9 @@
     "better-sqlite3": "^12.4.1",
     "express": "^5.1.0",
     "sqlite3": "^5.1.7"
+  },
+  "devDependencies": {
+    "electron": "^38.3.0",
+    "electron-packager": "^17.1.2"
   }
 }
