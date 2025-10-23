@@ -5,7 +5,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
-    "pack": "electron-packager . AlphaStock --platform=win32 --arch=x64 --out=dist --overwrite"
+    "pack": "electron-packager . AlphaStock --platform=win32 --arch=x64 --out=dist --overwrite",
+    "dist": "electron-builder"
   },
   "repository": {
     "type": "git",
@@ -26,6 +27,13 @@
   },
   "devDependencies": {
     "electron": "^38.3.0",
+    "electron-builder": "^26.0.12",
     "electron-packager": "^17.1.2"
+  },
+  "build": {
+    "appId": "com.AlphaStock.sistema",
+    "win": {
+      "target": "nsis"
+    }
   }
 }
