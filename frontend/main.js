@@ -1,686 +1,740 @@
-// Frontend/main.js
-// Versión adaptada para trabajar con Backend (SQLite) y tu index.html
-// Asegúrate de reiniciar node server.js después de reemplazar este archivo.
+// main.js (frontend) — diseñado para el index.html que pegaste
 
-let products = [];         // productos traídos del servidor
-let categories = [];       // arreglo de {id, nombre}
-let tags = [];             // arreglo de {id, nombre}
-let selectedTags = [];     // nombres seleccionadas en formulario nuevo
-let editSelectedTags = []; // nombres seleccionadas en formulario editar
-let editingProductIndex = null; // índice en products[] para editar (no usa id)
+// -------------------- Variables globales --------------------
+let products = [];
+let categories = [];
+let tags = [];
+let selectedProductTags = []; // para formulario "Agregar Producto"
+let editSelectedTags = []; // para formulario edición
+let editingProductId = null;
 
-// ---------------------- UTIL ----------------------
-function log(...args) { console.log('[main.js]', ...args); }
-function showError(msg) { console.error('[main.js]', msg); alert(msg); }
+// -------------------- Utilidades --------------------
+function log(msg) {
+  console.log("[main.js] " + msg);
+}
+function showError(msg) {
+  // Si quieres un contenedor visible en HTML lo agregas; por ahora mostramos por consola
+  console.error("[main.js] " + msg);
+}
+function q(sel) {
+  return document.querySelector(sel);
+}
+function qa(sel) {
+  return Array.from(document.querySelectorAll(sel));
+}
+function escapeHtml(s) {
+  const d = document.createElement("div");
+  d.textContent = s;
+  return d.innerHTML;
+}
 
-// ---------------------- CARGA INICIAL ----------------------
-window.addEventListener('load', async () => {
-  // Si estamos en login.html, el form de login puede existir (index carga main.js también, es tolerante).
-  const loginForm = document.getElementById('loginForm');
-  if (loginForm) bindLoginForm(loginForm);
+// -------------------- switchTab (respeta tu HTML y botones) --------------------
+function switchTab(tabId) {
+  // Contenidos
+  const contents = qa(".tab-content");
+  contents.forEach((c) => c.classList.remove("active"));
 
-  // Si estamos en index/dashboard
-  if (window.location.pathname.endsWith('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-    // inicializar UI y cargar datos
-    try {
-      await loadCategories();
-      await loadTags();
-      await loadProducts();
-      updateCategorySelects(); // llena selects
-      renderCategories();
-      renderTags();
-      renderProducts();
-      // setup inputs de etiquetas (si existen)
-      setupTagInput('productTagInput','productTagsContainer','tagSuggestions', selectedTags);
-      setupTagInput('editTagInput','editTagsContainer','editTagSuggestions', editSelectedTags);
+  const target = document.getElementById(tabId);
+  if (target) target.classList.add("active");
 
-      // Enlazar forms
-      const formCat = document.getElementById('categoryForm');
-      if (formCat) formCat.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleAddCategory(); });
-
-      const formTag = document.getElementById('tagForm');
-      if (formTag) formTag.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleAddTag(); });
-
-      const productForm = document.getElementById('productForm');
-      if (productForm) productForm.addEventListener('submit', async (e)=>{ e.preventDefault(); await handleAddProduct(); });
-
-      const searchInput = document.getElementById('searchInput');
-      if (searchInput) {
-        searchInput.addEventListener('input', (e) => {
-          window.searchTerm = e.target.value.trim().toLowerCase();
-          renderProducts();
-        });
-      }
-    } catch (err) {
-      showError('Error inicializando la aplicación. Revisa la consola.');
-      console.error(err);
-    }
-  }
-});
-
-// ---------------------- LOGIN ----------------------
-function bindLoginForm(form) {
-  form.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    const username = document.getElementById('username').value;
-    const password = document.getElementById('password').value;
-    try {
-      const res = await fetch('/login', {
-        method: 'POST',
-        headers: {'Content-Type': 'application/json'},
-        body: JSON.stringify({ username, password })
-      });
-      const data = await res.json();
-      if (res.ok && data.success) {
-        window.location.href = '/index.html';
-      } else {
-        alert(data.error || 'Credenciales incorrectas');
-      }
-    } catch (err) {
-      showError('No se pudo conectar al servidor para iniciar sesión.');
-    }
+  // Botones: aplica clase active según orden conocido
+  const tabOrder = ["dashboard", "categories", "add", "list"];
+  const tabs = qa(".tabs .tab");
+  tabs.forEach((btn, i) => {
+    if (tabOrder[i] === tabId) btn.classList.add("active");
+    else btn.classList.remove("active");
   });
 }
 
-// ---------------------- CATEGORÍAS ----------------------
+// -------------------- CARGA / RENDER Categorías --------------------
 async function loadCategories() {
   try {
-    const res = await fetch('/api/categories');
-    if (!res.ok) throw new Error('Error cargando categorías');
-    categories = await res.json(); // [{id, nombre}, ...]
-    updateCategorySelects();
-    renderCategories();
-  } catch (err) {
-    showError('No se pudieron cargar categorías.');
-    console.error(err);
-  }
-}
-
-async function handleAddCategory() {
-  const nombre = document.getElementById('categoryName').value.trim();
-  if (!nombre) return alert('Por favor ingresa un nombre de categoría');
-  try {
-    const res = await fetch('/api/categories', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ nombre })
-    });
+    const res = await fetch("http://localhost:3000/api/categories");
+    if (!res.ok) throw new Error("Error al obtener categorías");
     const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al crear categoría');
-    document.getElementById('categoryName').value = '';
-    await loadCategories();
-    alert('Categoría agregada exitosamente');
+    // Mapear a {id, nombre}
+    categories = data.map((c) => ({ id: c.id, nombre: c.nombre }));
+    renderCategoriesGrid();
+    populateCategorySelects();
+    renderStats(); // actualizar contadores que dependen de categorías
   } catch (err) {
-    showError(err.message || 'Error al agregar categoría');
+    showError("Error cargando categorías: " + err.message);
   }
 }
 
-function renderCategories() {
-  const grid = document.getElementById('categoriesGrid');
+function renderCategoriesGrid() {
+  const grid = document.getElementById("categoriesGrid");
   if (!grid) return;
-  grid.innerHTML = '';
-  if (!categories || categories.length === 0) {
-    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#666;">No hay categorías</p>';
-    return;
-  }
-  categories.forEach((c, index) => {
-    const card = document.createElement('div');
-    card.className = 'item-card';
-    card.innerHTML = `
-      <div class="item-name">${escapeHtml(c.nombre)}</div>
-      <div class="item-actions">
-        <button class="btn btn-edit btn-small" data-idx="${index}" data-action="edit-cat">Editar</button>
-        <button class="btn btn-danger btn-small" data-idx="${index}" data-action="del-cat">Eliminar</button>
-      </div>
-    `;
-    grid.appendChild(card);
-  });
-
-  // Delegación para editar/eliminar
-  grid.querySelectorAll('[data-action="edit-cat"]').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      const idx = Number(btn.dataset.idx);
-      editCategory(idx);
-    });
-  });
-  grid.querySelectorAll('[data-action="del-cat"]').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      const idx = Number(btn.dataset.idx);
-      deleteCategory(idx);
-    });
-  });
-}
-
-function updateCategorySelects() {
-  const selects = [ document.getElementById('productCategory'), document.getElementById('editCategory') ];
-  selects.forEach(select=>{
-    if (!select) return;
-    const current = select.value;
-    select.innerHTML = '<option value="">Seleccionar categoría</option>';
-    categories.forEach(c=>{
-      const opt = document.createElement('option');
-      opt.value = c.id;
-      opt.textContent = c.nombre;
-      select.appendChild(opt);
-    });
-    if (current) select.value = current;
-  });
-}
-
-// Editar categoría (UI)
-let editingCategoryIndex = null;
-function editCategory(index) {
-  editingCategoryIndex = index;
-  const c = categories[index];
-  if (!c) return;
-  document.getElementById('editCategoryForm').style.display = 'block';
-  document.getElementById('editCategoryName').value = c.nombre;
-}
-
-async function saveCategoryEdit() {
-  const newName = document.getElementById('editCategoryName').value.trim();
-  if (!newName) return alert('El nombre no puede estar vacío');
-  try {
-    // No tenemos endpoint PUT, así que insertamos nueva y (opcional) podrías eliminar la antigua si quieres.
-    const res = await fetch('/api/categories', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ nombre: newName })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error actualizando categoría');
-    // Simple: recargar categorías
-    document.getElementById('editCategoryForm').style.display = 'none';
-    document.getElementById('editCategoryName').value = '';
-    await loadCategories();
-    alert('Categoría actualizada (se creó una nueva entrada).');
-  } catch (err) {
-    showError(err.message || 'Error al guardar categoría');
-  }
-}
-
-function cancelCategoryEdit() {
-  editingCategoryIndex = null;
-  const f = document.getElementById('editCategoryForm');
-  if (f) { f.style.display = 'none'; }
-  const input = document.getElementById('editCategoryName');
-  if (input) input.value = '';
-}
-
-async function deleteCategory(index) {
-  const cat = categories[index];
-  if (!cat) return;
-  if (!confirm(`Eliminar categoría "${cat.nombre}"? Esto fallará si existen productos ligados a ella.`)) return;
-
-  try {
-    const res = await fetch(`/api/categories/${cat.id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al eliminar categoría');
-    alert('✅ Categoría eliminada correctamente');
-    await loadCategories(); // recargar lista
-  } catch (err) {
-    showError(err.message || 'Error al eliminar categoría');
-  }
-}
-
-
-// ---------------------- ETIQUETAS ----------------------
-async function loadTags() {
-  try {
-    const res = await fetch('/api/tags');
-    if (!res.ok) throw new Error('Error cargando etiquetas');
-    tags = await res.json(); // [{id,nombre},...]
-    renderTags();
-  } catch (err) {
-    showError('No se pudieron cargar etiquetas');
-  }
-}
-
-async function handleAddTag() {
-  const nombre = document.getElementById('tagName').value.trim();
-  if (!nombre) return alert('Ingrese un nombre para la etiqueta');
-  try {
-    const res = await fetch('/api/tags', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ nombre })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error agregando etiqueta');
-    document.getElementById('tagName').value = '';
-    await loadTags();
-    alert('Etiqueta agregada');
-  } catch (err) {
-    showError(err.message || 'Error al agregar etiqueta');
-  }
-}
-
-function renderTags() {
-  const grid = document.getElementById('tagsGrid');
-  if (!grid) return;
-  grid.innerHTML = '';
-  if (!tags || tags.length === 0) {
-    grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:#666;">No hay etiquetas</p>';
-    return;
-  }
-  tags.forEach((t, idx) => {
-    const div = document.createElement('div');
-    div.className = 'item-card';
+  grid.innerHTML = "";
+  categories.forEach((cat) => {
+    const div = document.createElement("div");
+    div.className = "item-card";
     div.innerHTML = `
-      <div class="item-name">${escapeHtml(t.nombre)}</div>
+      <div class="item-name">${escapeHtml(cat.nombre)}</div>
       <div class="item-actions">
-        <button class="btn btn-edit btn-small" data-idx="${idx}" data-action="edit-tag">Editar</button>
-        <button class="btn btn-danger btn-small" data-idx="${idx}" data-action="del-tag">Eliminar</button>
+        <button class="btn btn-small" data-id="${
+          cat.id
+        }" onclick="startEditCategory(${cat.id})">Editar</button>
+        <button class="btn btn-secondary btn-small" data-id="${
+          cat.id
+        }" onclick="deleteCategory(${cat.id})">Eliminar</button>
       </div>
     `;
     grid.appendChild(div);
   });
-
-  grid.querySelectorAll('[data-action="edit-tag"]').forEach(btn=>btn.addEventListener('click', ()=>{
-    const i = Number(btn.dataset.idx);
-    editTag(i);
-  }));
-  grid.querySelectorAll('[data-action="del-tag"]').forEach(btn=>btn.addEventListener('click', ()=>{
-    const i = Number(btn.dataset.idx);
-    deleteTag(i);
-  }));
 }
 
-let editingTagIndex = null;
-function editTag(index) {
-  editingTagIndex = index;
-  const t = tags[index];
-  if (!t) return;
-  document.getElementById('editTagForm').style.display = 'block';
-  document.getElementById('editTagName').value = t.nombre;
-}
-
-async function saveTagEdit() {
-  const newName = document.getElementById('editTagName').value.trim();
-  if (!newName) return alert('El nombre de la etiqueta no puede estar vacío');
-  // No hay endpoint PUT para tags -> crear nueva etiqueta y (opcional) eliminar la antigua
-  try {
-    const res = await fetch('/api/tags', {
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({ nombre: newName })
-    });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error actualizando etiqueta');
-    document.getElementById('editTagForm').style.display = 'none';
-    document.getElementById('editTagName').value = '';
-    await loadTags();
-    alert('Etiqueta reemplazada (creada nueva).');
-  } catch (err) {
-    showError(err.message || 'Error al guardar etiqueta');
-  }
-}
-
-function cancelTagEdit() {
-  editingTagIndex = null;
-  const f = document.getElementById('editTagForm');
-  if (f) f.style.display = 'none';
-  const input = document.getElementById('editTagName');
-  if (input) input.value = '';
-}
-
-async function deleteTag(index) {
-  const t = tags[index];
-  if (!t) return;
-  if (!confirm(`Eliminar etiqueta "${t.nombre}"? Esto puede afectar productos que la usen.`)) return;
-
-  try {
-    const res = await fetch(`/api/tags/${t.id}`, { method: 'DELETE' });
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error al eliminar etiqueta');
-    alert('✅ Etiqueta eliminada correctamente');
-    await loadTags(); // recargar lista
-  } catch (err) {
-    showError(err.message || 'Error al eliminar etiqueta');
-  }
-}
-
-
-// ---------------------- TAG INPUT (sugerencias, selección) ----------------------
-function setupTagInput(inputId, containerId, suggestionsId, selectedTagsArray) {
-  const input = document.getElementById(inputId);
-  const container = document.getElementById(containerId);
-  const suggestions = document.getElementById(suggestionsId);
-  if (!input || !container || !suggestions) return;
-
-  function renderSelected() {
-    container.innerHTML = '';
-    const arr = selectedTagsArray === selectedTags ? selectedTags : editSelectedTags;
-    arr.forEach(tag => {
-      const span = document.createElement('span');
-      span.className = 'selected-tag';
-      span.innerHTML = `${escapeHtml(tag)} <span class="tag-remove" data-tag="${escapeHtml(tag)}">×</span>`;
-      container.appendChild(span);
-      span.querySelector('.tag-remove').addEventListener('click', () => {
-        const idx = arr.indexOf(tag);
-        if (idx > -1) { arr.splice(idx,1); renderSelected(); }
-      });
-    });
-    container.appendChild(input);
-  }
-
-  input.addEventListener('input', (e)=>{
-    const v = e.target.value.trim().toLowerCase();
-    if (!v) { suggestions.style.display = 'none'; return; }
-    const filtered = tags.filter(t => t.nombre.toLowerCase().includes(v) && !( (selectedTagsArray===selectedTags?selectedTags:editSelectedTags).includes(t.nombre) ));
-    if (filtered.length === 0) { suggestions.style.display = 'none'; return; }
-    suggestions.innerHTML = filtered.map(ft => `<div class="tag-suggestion" data-name="${escapeHtml(ft.nombre)}">${escapeHtml(ft.nombre)}</div>`).join('');
-    suggestions.style.display = 'block';
-    suggestions.querySelectorAll('.tag-suggestion').forEach(sg=>{
-      sg.addEventListener('click', ()=>{
-        const name = sg.dataset.name;
-        const arr = selectedTagsArray === selectedTags ? selectedTags : editSelectedTags;
-        if (!arr.includes(name)) { arr.push(name); renderSelected(); }
-        input.value = '';
-        suggestions.style.display = 'none';
-      });
+function populateCategorySelects() {
+  const selects = [
+    document.getElementById("productCategory"),
+    document.getElementById("editCategory"),
+  ];
+  selects.forEach((sel) => {
+    if (!sel) return;
+    sel.innerHTML = '<option value="">Seleccionar categoría</option>';
+    categories.forEach((c) => {
+      const opt = document.createElement("option");
+      opt.value = c.id;
+      opt.textContent = c.nombre;
+      sel.appendChild(opt);
     });
   });
+}
 
-  // Enter para añadir si coincide
-  input.addEventListener('keydown', (e)=>{
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      const v = input.value.trim();
-      if (!v) return;
-      const tObj = tags.find(t => t.nombre === v);
-      if (tObj) {
-        const arr = selectedTagsArray === selectedTags ? selectedTags : editSelectedTags;
-        if (!arr.includes(tObj.nombre)) { arr.push(tObj.nombre); renderSelected(); }
-        input.value = '';
-        suggestions.style.display = 'none';
-      } else {
-        // opción: crear etiqueta remotamente
-        alert('Etiqueta no encontrada. Primero créala en el módulo Etiquetas.');
-      }
+// Formularios categoría
+function bindCategoryForm() {
+  const form = document.getElementById("categoryForm");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("categoryName");
+    if (!input || !input.value.trim()) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/categories", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: input.value.trim() }),
+      });
+      if (!res.ok) throw new Error("Error al crear categoría");
+      input.value = "";
+      await loadCategories();
+    } catch (err) {
+      showError(err.message);
     }
   });
-
-  // click fuera oculta sugerencias
-  document.addEventListener('click', (e)=>{
-    if (!container.contains(e.target) && !suggestions.contains(e.target)) suggestions.style.display = 'none';
-  });
-
-  renderSelected();
 }
 
-
-function renderProducts() {
-  const tbody = document.getElementById('productsTableBody');
-  if (!tbody) return;
-  tbody.innerHTML = '';
-
-  const term = (typeof window.searchTerm !== 'undefined' && window.searchTerm) ? window.searchTerm.toLowerCase() : '';
-
-  const filtered = products.filter(product => {
-    if (!product.name) return false;
-    return (
-      product.name.toLowerCase().includes(term) ||
-      (product.category && product.category.toLowerCase().includes(term)) ||
-      (product.description && product.description.toLowerCase().includes(term)) ||
-      (product.tags && product.tags.some(t => t.toLowerCase().includes(term))) ||
-      String(product.price).includes(term) ||
-      String(product.quantity || '').includes(term)
+// Edit / Delete category
+let editingCategoryId = null;
+function startEditCategory(id) {
+  editingCategoryId = id;
+  const cat = categories.find((c) => c.id == id);
+  if (!cat) return;
+  document.getElementById("editCategoryName").value = cat.nombre;
+  document.getElementById("editCategoryForm").style.display = "block";
+}
+async function saveCategoryEdit() {
+  const input = document.getElementById("editCategoryName");
+  if (!editingCategoryId || !input.value.trim()) return;
+  try {
+    const res = await fetch(
+      `http://localhost:3000/api/categories/${editingCategoryId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: input.value.trim() }),
+      }
     );
-  });
+    if (!res.ok) throw new Error("Error al actualizar categoría");
+    editingCategoryId = null;
+    input.value = "";
+    document.getElementById("editCategoryForm").style.display = "none";
+    await loadCategories();
+  } catch (err) {
+    showError(err.message);
+  }
+}
+function cancelCategoryEdit() {
+  editingCategoryId = null;
+  document.getElementById("editCategoryName").value = "";
+  document.getElementById("editCategoryForm").style.display = "none";
+}
+async function deleteCategory(id) {
+  if (!confirm("Eliminar categoría?")) return;
+  try {
+    const res = await fetch(`http://localhost:3000/api/categories/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Error al eliminar categoría");
+    await loadCategories();
+    await loadProducts(); // refrescar productos porque categoría pudo afectar listado
+  } catch (err) {
+    showError(err.message);
+  }
+}
 
-  filtered.forEach((product, index) => {
-    const tr = tbody.insertRow();
-    const tagsHTML = product.tags && product.tags.length>0 ? `<div class="tags-container">${product.tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : '<span style="color:#999">Sin etiquetas</span>';
-    const descHTML = product.description ? `<div class="product-description">${escapeHtml(product.description)}</div>` : '<span style="color:#999">Sin descripción</span>';
+// -------------------- CARGA / RENDER Etiquetas --------------------
+async function loadTags() {
+  try {
+    const res = await fetch("http://localhost:3000/api/tags");
+    if (!res.ok) throw new Error("Error al obtener etiquetas");
+    const data = await res.json();
+    tags = data.map((t) => ({ id: t.id, nombre: t.nombre }));
+    renderTagsGrid();
+    renderStats(); // actualizar contadores si aplica
+  } catch (err) {
+    showError("Error cargando etiquetas: " + err.message);
+  }
+}
+
+function renderTagsGrid() {
+  const grid = document.getElementById("tagsGrid");
+  if (!grid) return;
+  grid.innerHTML = "";
+  tags.forEach((tag) => {
+    const div = document.createElement("div");
+    div.className = "item-card";
+    div.innerHTML = `
+      <div class="item-name">${escapeHtml(tag.nombre)}</div>
+      <div class="item-actions">
+        <button class="btn btn-small" onclick="startEditTag(${
+          tag.id
+        })">Editar</button>
+        <button class="btn btn-secondary btn-small" onclick="deleteTag(${
+          tag.id
+        })">Eliminar</button>
+      </div>
+    `;
+    grid.appendChild(div);
+  });
+}
+
+// Tag form
+function bindTagForm() {
+  const form = document.getElementById("tagForm");
+  if (!form) return;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const input = document.getElementById("tagName");
+    if (!input || !input.value.trim()) return;
+    try {
+      const res = await fetch("http://localhost:3000/api/tags", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre: input.value.trim() }),
+      });
+      if (!res.ok) throw new Error("Error al crear etiqueta");
+      input.value = "";
+      await loadTags();
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+}
+
+let editingTagId = null;
+function startEditTag(id) {
+  editingTagId = id;
+  const tag = tags.find((t) => t.id == id);
+  if (!tag) return;
+  document.getElementById("editTagName").value = tag.nombre;
+  document.getElementById("editTagForm").style.display = "block";
+}
+async function saveTagEdit() {
+  const input = document.getElementById("editTagName");
+  if (!editingTagId || !input.value.trim()) return;
+  try {
+    const res = await fetch(`http://localhost:3000/api/tags/${editingTagId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre: input.value.trim() }),
+    });
+    if (!res.ok) throw new Error("Error al actualizar etiqueta");
+    editingTagId = null;
+    input.value = "";
+    document.getElementById("editTagForm").style.display = "none";
+    await loadTags();
+    await loadProducts(); // refrescar si etiquetas cambian
+  } catch (err) {
+    showError(err.message);
+  }
+}
+function cancelTagEdit() {
+  editingTagId = null;
+  document.getElementById("editTagName").value = "";
+  document.getElementById("editTagForm").style.display = "none";
+}
+async function deleteTag(id) {
+  if (!confirm("Eliminar etiqueta?")) return;
+  try {
+    const res = await fetch(`http://localhost:3000/api/tags/${id}`, {
+      method: "DELETE",
+    });
+    if (!res.ok) throw new Error("Error al eliminar etiqueta");
+    await loadTags();
+    await loadProducts();
+  } catch (err) {
+    showError(err.message);
+  }
+}
+
+// -------------------- CARGA / RENDER Productos --------------------
+async function loadProducts() {
+  try {
+    const res = await fetch("http://localhost:3000/api/products");
+    if (!res.ok) throw new Error("Error al obtener productos");
+    const data = await res.json();
+    // Mapear cada producto a estructura amigable
+    products = data.map((p) => ({
+      id: p.id,
+      nombre: p.nombre,
+      descripcion: p.descripcion,
+      precio: p.precio,
+      cantidad: p.cantidad,
+      categoria_id: p.categoria_id,
+      categoria_nombre: p.categoria || null,
+      created_at: p.created_at,
+      etiquetas: Array.isArray(p.etiquetas)
+        ? p.etiquetas.map((t) => ({ id: t.id, nombre: t.nombre }))
+        : [],
+    }));
+    renderProductsTable();
+    renderRecentProducts();
+    renderStats();
+  } catch (err) {
+    showError("Error cargando productos: " + err.message);
+  }
+}
+
+function renderProductsTable() {
+  const tbody = document.getElementById("productsTableBody");
+  if (!tbody) return;
+  tbody.innerHTML = "";
+  products.forEach((p) => {
+    const tr = document.createElement("tr");
+    const tagsText = p.etiquetas.map((t) => escapeHtml(t.nombre)).join(", ");
     tr.innerHTML = `
-      <td><strong>${escapeHtml(product.name)}</strong></td>
-      <td>${escapeHtml(product.category || '')}</td>
-      <td>${descHTML}</td>
-      <td>${tagsHTML}</td>
-      <td>${product.quantity || ''}</td>
-      <td>${parseFloat(product.price||0).toFixed(2)}</td>
-      <td>${product.dateAdded ? new Date(product.dateAdded).toLocaleDateString() : ''}</td>
+      <td>${escapeHtml(p.nombre)}</td>
+      <td>${escapeHtml(p.categoria_nombre || "")}</td>
+      <td>${escapeHtml(p.descripcion || "")}</td>
+      <td>${tagsText}</td>
+      <td>${p.cantidad}</td>
+      <td>$${Number(p.precio).toFixed(2)}</td>
+      <td>${p.created_at ? p.created_at.split(" ")[0] : ""}</td>
       <td>
-        <div class="actions">
-          <button class="btn btn-secondary btn-small" data-idx="${index}" data-action="edit">Editar</button>
-          <button class="btn btn-danger btn-small" data-idx="${index}" data-action="delete">Eliminar</button>
-        </div>
+        <button class="btn btn-small" onclick="openEditForm(${
+          p.id
+        })">Editar</button>
+        <button class="btn btn-secondary btn-small" onclick="deleteProduct(${
+          p.id
+        })">Eliminar</button>
       </td>
     `;
-    // bind actions
-    tr.querySelector('[data-action="edit"]').addEventListener('click', ()=> editProduct(index));
-    tr.querySelector('[data-action="delete"]').addEventListener('click', ()=> deleteProduct(index));
+    tbody.appendChild(tr);
   });
 }
 
 function renderRecentProducts() {
-  const container = document.getElementById('recentProductsList');
-  if (!container) return;
-  const recent = products.slice(-5).reverse();
-  if (recent.length === 0) { container.innerHTML = '<p style="color:#666">No hay productos recientes</p>'; return; }
-  container.innerHTML = recent.map(p=>{
-    const tagsHTML = p.tags && p.tags.length>0 ? `<div class="tags-container" style="margin-top:5px;">${p.tags.map(t=>`<span class="tag">${escapeHtml(t)}</span>`).join('')}</div>` : '';
-    const desc = p.description ? `<div class="product-description">${escapeHtml(p.description)}</div>` : '';
-    return `
-      <div class="recent-item">
-        <div class="recent-item-content">
-          <strong>${escapeHtml(p.name)}</strong><br>
-          <small>${escapeHtml(p.category || '')} - ${parseFloat(p.price||0).toFixed(2)}</small>
-          ${desc}
-          ${tagsHTML}
-        </div>
-        <div style="white-space:nowrap;">${p.dateAdded ? new Date(p.dateAdded).toLocaleDateString() : ''}</div>
-      </div>
-    `;
-  }).join('');
+  const list = document.getElementById("recentProductsList");
+  if (!list) return;
+  list.innerHTML = "";
+  const recent = products.slice(0, 5);
+  if (recent.length === 0) {
+    list.innerHTML = "<div>No hay productos recientes</div>";
+    return;
+  }
+  recent.forEach((p) => {
+    const div = document.createElement("div");
+    div.className = "recent-item";
+    div.innerHTML = `<strong>${escapeHtml(p.nombre)}</strong> — ${escapeHtml(
+      p.categoria_nombre || ""
+    )} — $${Number(p.precio).toFixed(2)}`;
+    list.appendChild(div);
+  });
 }
 
-// ---------------------- AGREGAR PRODUCTO ----------------------
-async function handleAddProduct() {
-  const nombre = document.getElementById('productName').value.trim();
-  const categoria_id = document.getElementById('productCategory').value;
-  const precio = parseFloat(document.getElementById('productPrice').value);
-  const cantidad = parseInt(document.getElementById('productQuantity').value) || 1;
-
-  if (!nombre || !categoria_id || !precio) return alert('Datos incompletos');
-
-  // map selectedTags (names) to ids
-  const tag_ids = selectedTags.map(name => {
-    const t = tags.find(x => x.nombre === name);
-    return t ? t.id : null;
-  }).filter(x => x !== null);
-
+async function deleteProduct(id) {
+  if (!confirm("Eliminar producto?")) return;
   try {
-    const res = await fetch('/api/products', {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({
-        nombre,
-        descripcion: document.getElementById('productDescription').value || '',
-        precio,
-        categoria_id,
-        cantidad,           // <-- columna cantidad
-        etiquetas: tag_ids
-      })
+    const res = await fetch(`http://localhost:3000/api/products/${id}`, {
+      method: "DELETE",
     });
-
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error agregando producto');
-
-    // limpiar formulario
-    document.getElementById('productForm').reset();
-    selectedTags = [];
-    renderSelectedTags('productTagsContainer','productTagInput','selectedTags');
-
-    // recargar productos y actualizar stats
+    if (!res.ok) throw new Error("Error al eliminar producto");
     await loadProducts();
-    alert('Producto agregado exitosamente');
   } catch (err) {
-    showError(err.message || 'Error al guardar producto');
+    showError(err.message);
   }
 }
 
-// ---------------------- CARGAR PRODUCTOS ----------------------
-async function loadProducts() {
-  try {
-    const res = await fetch('/api/products');
-    if (!res.ok) throw new Error('Error cargando productos');
-    const data = await res.json();
-
-    // mapear productos con cantidad y tags
-    products = data.map(p => ({
-      id: p.id,
-      name: p.nombre,
-      description: p.descripcion,
-      price: parseFloat(p.precio || 0),
-      cantidad: parseInt(p.cantidad || 1), // <-- cantidad
-      category: p.categoria || '',
-      category_id: p.categoria_id,
-      dateAdded: p.created_at,
-      tags: Array.isArray(p.etiquetas) ? p.etiquetas.map(t => t.nombre) : []
-    }));
-
-    renderProducts();
-    renderRecentProducts();
-    updateStats();
-  } catch (err) {
-    showError('No se pudieron cargar los productos');
-    console.error(err);
-  }
-}
-
-// ---------------------- ACTUALIZAR ESTADÍSTICAS ----------------------
-function updateStats() {
-  try {
-    document.getElementById('totalProducts').textContent = products.length;
-
-    // productos recientes (últimos 7 días)
-    const weekAgo = new Date();
-    weekAgo.setDate(weekAgo.getDate() - 7);
-    const recentCount = products.filter(p => new Date(p.dateAdded) > weekAgo).length;
-    document.getElementById('recentProducts').textContent = recentCount;
-
-    // valor total inventario = suma de precio * cantidad
-    const totalValue = products.reduce((sum, p) => sum + (p.price * p.cantidad), 0);
-    document.getElementById('totalValue').textContent = totalValue.toFixed(2);
-
-    // tipos de productos
-    const uniqueCategories = [...new Set(products.map(p => p.category))].filter(x => x);
-    document.getElementById('productTypes').textContent = uniqueCategories.length;
-  } catch (err) {
-    console.error('Error actualizando estadísticas:', err);
-  }
-}
-
-
-
-function editProduct(index) {
-  editingProductIndex = index;
-  const p = products[index];
-  if (!p) return;
-  // show edit form
-  const form = document.getElementById('editForm');
+// -------------------- Form: Agregar Producto --------------------
+function bindProductForm() {
+  const form = document.getElementById("productForm");
   if (!form) return;
-  form.style.display = 'block';
-  document.getElementById('editName').value = p.name;
-  document.getElementById('editCategory').value = p.category_id || '';
-  document.getElementById('editQuantity').value = p.quantity || '';
-  document.getElementById('editPrice').value = p.price || '';
-  document.getElementById('editDescription').value = p.description || '';
-  editSelectedTags = p.tags ? [...p.tags] : [];
-  renderSelectedTags('editTagsContainer','editTagInput','editSelectedTags');
-  form.scrollIntoView({behavior:'smooth'});
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const nombre = document.getElementById("productName").value.trim();
+    const categoria_id =
+      parseInt(document.getElementById("productCategory").value) || null;
+    const cantidad =
+      parseInt(document.getElementById("productQuantity").value) || 1;
+    const precio =
+      parseFloat(document.getElementById("productPrice").value) || 0;
+    const descripcion = document
+      .getElementById("productDescription")
+      .value.trim();
+
+    if (!nombre || !categoria_id) {
+      alert("Nombre y categoría son requeridos");
+      return;
+    }
+
+    try {
+      const payload = {
+        nombre,
+        descripcion,
+        precio,
+        cantidad,
+        categoria_id,
+        etiquetas: selectedProductTags.map((t) => t.id), // array de ids
+      };
+      const res = await fetch("http://localhost:3000/api/products", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error("Error al crear producto");
+      // reset form
+      form.reset();
+      selectedProductTags = [];
+      renderSelectedTagsUI(); // limpiar chips
+      await loadProducts();
+      switchTab("list"); // Ir a lista
+    } catch (err) {
+      showError(err.message);
+    }
+  });
+}
+
+// -------------------- Edit product (abrir formulario) --------------------
+function openEditForm(productId) {
+  const p = products.find((x) => x.id == productId);
+  if (!p) return;
+  editingProductId = p.id;
+  document.getElementById("editForm").style.display = "block";
+  document.getElementById("editName").value = p.nombre;
+  document.getElementById("editCategory").value = p.categoria_id || "";
+  document.getElementById("editQuantity").value = p.cantidad;
+  document.getElementById("editPrice").value = p.precio;
+  document.getElementById("editDescription").value = p.descripcion || "";
+  // set tags
+  editSelectedTags = p.etiquetas.map((t) => ({ id: t.id, nombre: t.nombre }));
+  renderEditSelectedTagsUI();
+  switchTab("list");
 }
 
 async function saveEdit() {
-  if (editingProductIndex === null) return;
-  // NOTE: backend currently doesn't have PUT /api/products/:id — implement server-side update for persistence.
-  // Here we update locally and reload list from server (but without server update, change won't persist).
-  const id = products[editingProductIndex].id;
-  const updated = {
-    nombre: document.getElementById('editName').value,
-    categoria_id: document.getElementById('editCategory').value,
-    descripcion: document.getElementById('editDescription').value || '',
-    precio: document.getElementById('editPrice').value,
-    // etiquetas -> need ids; not updating tags server-side without endpoint
-  };
+  if (!editingProductId) return;
+  const nombre = document.getElementById("editName").value.trim();
+  const categoria_id =
+    parseInt(document.getElementById("editCategory").value) || null;
+  const cantidad = parseInt(document.getElementById("editQuantity").value) || 1;
+  const precio = parseFloat(document.getElementById("editPrice").value) || 0;
+  const descripcion = document.getElementById("editDescription").value.trim();
 
-  // TODO: call PUT /api/products/:id when implemented server-side
-  alert('Edición local completada. Para persistir los cambios implementa PUT /api/products/:id en Backend.');
-  // update local copy for UI
-  products[editingProductIndex].name = updated.nombre;
-  products[editingProductIndex].description = updated.descripcion;
-  products[editingProductIndex].price = updated.precio;
-  products[editingProductIndex].category = categories.find(c=>c.id==updated.categoria_id)?.nombre || '';
-  renderProducts();
-  cancelEdit();
-}
-
-function cancelEdit() {
-  editingProductIndex = null;
-  editSelectedTags = [];
-  const f = document.getElementById('editForm');
-  if (f) f.style.display = 'none';
-}
-
-// ---------------------- ELIMINAR PRODUCTO (ahora conectado al backend) ----------------------
-async function deleteProduct(index) {
-  const p = products[index];
-  if (!p) return;
-
-  if (!confirm(`¿Seguro que deseas eliminar el producto "${p.name}"? Esta acción no se puede deshacer.`)) return;
+  if (!nombre || !categoria_id) {
+    alert("Nombre y categoría son requeridos");
+    return;
+  }
 
   try {
-    const res = await fetch(`/api/products/${p.id}`, { method: 'DELETE' });
-    const data = await res.json();
-
-    if (!res.ok) throw new Error(data.error || 'Error al eliminar producto.');
-
-    alert('✅ Producto eliminado correctamente.');
-    await loadProducts(); // Recargar lista actualizada
+    const payload = {
+      nombre,
+      descripcion,
+      precio,
+      cantidad,
+      categoria_id,
+      etiquetas: editSelectedTags.map((t) => t.id),
+    };
+    const res = await fetch(
+      `http://localhost:3000/api/products/${editingProductId}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      }
+    );
+    if (!res.ok) throw new Error("Error al actualizar producto");
+    // reset
+    editingProductId = null;
+    document.getElementById("editForm").style.display = "none";
+    await loadProducts();
   } catch (err) {
-    console.error('Error al eliminar producto:', err);
-    alert('❌ No se pudo eliminar el producto. Revisa la consola.');
+    showError(err.message);
   }
 }
 
-// ---------------------- RENDER SELECTED TAGS (utility used by setupTagInput) ----------------------
-function renderSelectedTags(containerId, inputId, arrayName) {
-  const container = document.getElementById(containerId);
-  const input = document.getElementById(inputId);
-  if (!container || !input) return;
-  const targetArray = arrayName === 'selectedTags' ? selectedTags : editSelectedTags;
-  container.innerHTML = '';
-  targetArray.forEach(tag => {
-    const el = document.createElement('span');
-    el.className = 'selected-tag';
-    el.innerHTML = `${escapeHtml(tag)} <span class="tag-remove" data-tag="${escapeHtml(tag)}">×</span>`;
-    container.appendChild(el);
-    el.querySelector('.tag-remove').addEventListener('click', ()=>{
-      const idx = targetArray.indexOf(tag);
-      if (idx > -1) { targetArray.splice(idx,1); renderSelectedTags(containerId,inputId,arrayName); }
+function cancelEdit() {
+  editingProductId = null;
+  document.getElementById("editForm").style.display = "none";
+}
+
+// -------------------- Tag selection UI (Agregar Producto) --------------------
+function bindProductTagInput() {
+  const input = document.getElementById("productTagInput");
+  const suggestions = document.getElementById("tagSuggestions");
+  const container = document.getElementById("productTagsContainer");
+  if (!input || !suggestions || !container) return;
+
+  input.addEventListener("input", () => {
+    const qText = input.value.trim().toLowerCase();
+    if (!qText) {
+      suggestions.style.display = "none";
+      suggestions.innerHTML = "";
+      return;
+    }
+    const matched = tags.filter((t) => t.nombre.toLowerCase().includes(qText));
+    suggestions.innerHTML = "";
+    matched.forEach((t) => {
+      const div = document.createElement("div");
+      div.className = "suggestion-item";
+      div.textContent = t.nombre;
+      div.onclick = () => {
+        // add tag to selected if not exists
+        if (!selectedProductTags.some((x) => x.id === t.id)) {
+          selectedProductTags.push({ id: t.id, nombre: t.nombre });
+          renderSelectedTagsUI();
+        }
+        input.value = "";
+        suggestions.style.display = "none";
+      };
+      suggestions.appendChild(div);
     });
+    suggestions.style.display = matched.length ? "block" : "none";
   });
-  container.appendChild(input);
+
+  // cuando presiona Enter, si hay texto creamos nueva etiqueta automáticamente
+  input.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      // si la etiqueta ya existe, seleccionarla
+      const existing = tags.find(
+        (t) => t.nombre.toLowerCase() === text.toLowerCase()
+      );
+      if (existing) {
+        if (!selectedProductTags.some((x) => x.id === existing.id)) {
+          selectedProductTags.push({
+            id: existing.id,
+            nombre: existing.nombre,
+          });
+          renderSelectedTagsUI();
+        }
+        input.value = "";
+        return;
+      }
+      // crear etiqueta nueva en server
+      try {
+        const res = await fetch("http://localhost:3000/api/tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: text }),
+        });
+        if (!res.ok) throw new Error("Error creando etiqueta");
+        const resp = await res.json();
+        // recargar tags y seleccionar la nueva
+        await loadTags();
+        const newTag = tags.find(
+          (t) => t.nombre.toLowerCase() === text.toLowerCase()
+        );
+        if (newTag)
+          selectedProductTags.push({ id: newTag.id, nombre: newTag.nombre });
+        renderSelectedTagsUI();
+        input.value = "";
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+  });
 }
 
-// ---------------------- HELPERS ----------------------
-function escapeHtml(str) {
-  if (str === null || str === undefined) return '';
-  return String(str).replace(/[&<>"']/g, (m) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[m]);
+function renderSelectedTagsUI() {
+  const container = document.getElementById("productTagsContainer");
+  if (!container) return;
+  // Limpiar pero mantener el input
+  const input = document.getElementById("productTagInput");
+  container.innerHTML = "";
+  selectedProductTags.forEach((t) => {
+    const span = document.createElement("span");
+    span.className = "tag-chip";
+    span.textContent = t.nombre;
+    const btn = document.createElement("button");
+    btn.className = "tag-remove";
+    btn.textContent = "x";
+    btn.onclick = () => {
+      selectedProductTags = selectedProductTags.filter((x) => x.id !== t.id);
+      renderSelectedTagsUI();
+    };
+    span.appendChild(btn);
+    container.appendChild(span);
+  });
+  // re-add input
+  if (input) container.appendChild(input);
 }
 
-// ---------------------- SWITCH TAB (tu index.html usa esta función) ----------------------
-function switchTab(tabName) {
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
-  document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-  // encontrar botón que llamó — en inline onclick, event is global; fallback: find button by text
-  try {
-    if (window.event && window.event.target) window.event.target.classList.add('active');
-  } catch(e){}
-  const content = document.getElementById(tabName);
-  if (content) content.classList.add('active');
-}
-window.switchTab = switchTab; // exponer globalmente (para onclick inline)
+// -------------------- Tag selection UI (Editar Producto) --------------------
+function bindEditTagInput() {
+  const input = document.getElementById("editTagInput");
+  const suggestions = document.getElementById("editTagSuggestions");
+  const container = document.getElementById("editTagsContainer");
+  if (!input || !suggestions || !container) return;
 
+  input.addEventListener("input", () => {
+    const qText = input.value.trim().toLowerCase();
+    if (!qText) {
+      suggestions.style.display = "none";
+      suggestions.innerHTML = "";
+      return;
+    }
+    const matched = tags.filter((t) => t.nombre.toLowerCase().includes(qText));
+    suggestions.innerHTML = "";
+    matched.forEach((t) => {
+      const div = document.createElement("div");
+      div.className = "suggestion-item";
+      div.textContent = t.nombre;
+      div.onclick = () => {
+        if (!editSelectedTags.some((x) => x.id === t.id)) {
+          editSelectedTags.push({ id: t.id, nombre: t.nombre });
+          renderEditSelectedTagsUI();
+        }
+        input.value = "";
+        suggestions.style.display = "none";
+      };
+      suggestions.appendChild(div);
+    });
+    suggestions.style.display = matched.length ? "block" : "none";
+  });
+
+  input.addEventListener("keydown", async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      const existing = tags.find(
+        (t) => t.nombre.toLowerCase() === text.toLowerCase()
+      );
+      if (existing) {
+        if (!editSelectedTags.some((x) => x.id === existing.id)) {
+          editSelectedTags.push({ id: existing.id, nombre: existing.nombre });
+          renderEditSelectedTagsUI();
+        }
+        input.value = "";
+        return;
+      }
+      // crear nueva etiqueta y seleccionar
+      try {
+        const res = await fetch("http://localhost:3000/api/tags", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ nombre: text }),
+        });
+        if (!res.ok) throw new Error("Error creando etiqueta");
+        await loadTags();
+        const newTag = tags.find(
+          (t) => t.nombre.toLowerCase() === text.toLowerCase()
+        );
+        if (newTag)
+          editSelectedTags.push({ id: newTag.id, nombre: newTag.nombre });
+        renderEditSelectedTagsUI();
+        input.value = "";
+      } catch (err) {
+        showError(err.message);
+      }
+    }
+  });
+}
+
+function renderEditSelectedTagsUI() {
+  const container = document.getElementById("editTagsContainer");
+  if (!container) return;
+  const input = document.getElementById("editTagInput");
+  container.innerHTML = "";
+  editSelectedTags.forEach((t) => {
+    const span = document.createElement("span");
+    span.className = "tag-chip";
+    span.textContent = t.nombre;
+    const btn = document.createElement("button");
+    btn.className = "tag-remove";
+    btn.textContent = "x";
+    btn.onclick = () => {
+      editSelectedTags = editSelectedTags.filter((x) => x.id !== t.id);
+      renderEditSelectedTagsUI();
+    };
+    span.appendChild(btn);
+    container.appendChild(span);
+  });
+  if (input) container.appendChild(input);
+}
+
+// -------------------- Stats (simple) --------------------
+function renderStats() {
+  const totalProductsEl = document.getElementById("totalProducts");
+  const recentProductsEl = document.getElementById("recentProducts");
+  const totalValueEl = document.getElementById("totalValue");
+  const productTypesEl = document.getElementById("productTypes");
+  if (totalProductsEl) totalProductsEl.textContent = products.length;
+  if (recentProductsEl)
+    recentProductsEl.textContent = products.slice(0, 7).length;
+  const totalValue = products.reduce(
+    (acc, p) => acc + (Number(p.precio) || 0) * (Number(p.cantidad) || 0),
+    0
+  );
+  if (totalValueEl) totalValueEl.textContent = `$${totalValue.toFixed(2)}`;
+  if (productTypesEl) productTypesEl.textContent = categories.length;
+}
+
+// -------------------- BINDS + Inicialización --------------------
+async function initializeApp() {
+  // Bind forms and inputs
+  bindCategoryForm();
+  bindTagForm();
+  bindProductForm();
+  bindProductTagInput();
+  bindEditTagInput();
+
+  // Cargar datos iniciales
+  await loadCategories();
+  await loadTags();
+  await loadProducts();
+
+  // Setup initial UI state
+  switchTab("dashboard");
+  renderSelectedTagsUI();
+  renderEditSelectedTagsUI();
+
+  log("Aplicación inicializada correctamente");
+}
+
+// Exponer funciones necesarias en window (para los onclick inline del HTML)
+window.switchTab = switchTab;
+window.startEditCategory = startEditCategory;
+window.saveCategoryEdit = saveCategoryEdit;
+window.cancelCategoryEdit = cancelCategoryEdit;
+window.deleteCategory = deleteCategory;
+
+window.startEditTag = startEditTag;
+window.saveTagEdit = saveTagEdit;
+window.cancelTagEdit = cancelTagEdit;
+window.deleteTag = deleteTag;
+
+window.openEditForm = openEditForm;
+window.saveEdit = saveEdit;
+window.cancelEdit = cancelEdit;
+window.deleteProduct = deleteProduct;
+
+// Inicializar cuando se cargue la página
+window.addEventListener("load", () => {
+  initializeApp().catch((err) => {
+    showError("Error inicializando la app: " + err.message);
+  });
+});
