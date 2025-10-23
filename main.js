@@ -4,6 +4,21 @@ const { spawn } = require("child_process");
 
 let mainWindow;
 let backendProcess;
+let backendStarted = false;
+
+// Evitar dos instancias 🎯
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+} else {
+  app.on("second-instance", () => {
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) mainWindow.restore();
+      mainWindow.focus();
+    }
+  });
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -25,17 +40,15 @@ function createWindow() {
 }
 
 function startBackend() {
+  if (backendStarted) return; // 👈 evitar doble backend
+  backendStarted = true;
+
   const serverPath = path.join(__dirname, "Backend", "server.js");
   backendProcess = spawn("node", [serverPath], {
     shell: true,
     stdio: "inherit",
   });
 }
-
-app.whenReady().then(() => {
-  startBackend();
-  setTimeout(createWindow, 1500);
-});
 
 function waitForServer(url, timeout = 5000) {
   return new Promise((resolve, reject) => {
@@ -54,6 +67,7 @@ function waitForServer(url, timeout = 5000) {
 
 app.whenReady().then(async () => {
   startBackend();
+
   try {
     await waitForServer("http://localhost:3000");
     createWindow();
