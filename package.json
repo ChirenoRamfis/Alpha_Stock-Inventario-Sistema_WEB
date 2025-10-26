@@ -26,14 +26,21 @@
     "sqlite3": "^5.1.7"
   },
   "devDependencies": {
-    "electron": "^38.3.0",
+    "electron": "^38.4.0",
     "electron-builder": "^26.0.12",
     "electron-packager": "^17.1.2"
   },
   "build": {
-    "appId": "com.AlphaStock.sistema",
-    "win": {
-      "target": "nsis"
-    }
+  "appId": "com.AlphaStock.sistema",
+  "files": [
+    "Frontend/**/*",
+    "Backend/**/*",
+    "main.js",
+    "preload.js",
+    "package.json"
+  ],
+  "win": {
+    "target": "nsis"
   }
+}
 }

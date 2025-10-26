@@ -6,7 +6,7 @@ let mainWindow;
 let backendProcess;
 let backendStarted = false;
 
-// Evitar dos instancias 🎯
+// Evitar dos instancias
 const gotTheLock = app.requestSingleInstanceLock();
 if (!gotTheLock) {
   app.quit();
@@ -20,19 +20,30 @@ if (!gotTheLock) {
   });
 }
 
-function createWindow() {
+function createWindow(useLocal = false) {
   mainWindow = new BrowserWindow({
     width: 1200,
     height: 800,
     icon: path.join(__dirname, "Frontend", "icon.png"),
     webPreferences: {
-      preload: path.join(__dirname, "preload.js"), // 👈 preload
+      preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
       contextIsolation: true,
     },
   });
 
-  mainWindow.loadURL("http://localhost:3000/login.html");
+  if (useLocal) {
+    // Cargar directamente el archivo HTML desde el paquete
+    const indexPath = path.join(__dirname, "Frontend", "login.html");
+    console.log("Cargando HTML local:", indexPath);
+    mainWindow.loadFile(indexPath);
+  } else {
+    // Cargar desde el backend en localhost
+    mainWindow.loadURL("http://localhost:3000/login.html").catch(() => {
+      console.error("Fallo al conectar con backend, usando HTML local...");
+      createWindow(true); // fallback automático
+    });
+  }
 
   mainWindow.on("closed", () => {
     mainWindow = null;
@@ -40,25 +51,26 @@ function createWindow() {
 }
 
 function startBackend() {
-  if (backendStarted) return; // 👈 evitar doble backend
+  if (backendStarted) return;
   backendStarted = true;
 
   const serverPath = path.join(__dirname, "Backend", "server.js");
   backendProcess = spawn("node", [serverPath], {
+    cwd: __dirname,
     shell: true,
     stdio: "inherit",
   });
 }
 
-function waitForServer(url, timeout = 5000) {
+function waitForServer(url, timeout = 6000) {
   return new Promise((resolve, reject) => {
     const start = Date.now();
     const check = () => {
       fetch(url)
         .then(() => resolve())
         .catch(() => {
-          if (Date.now() - start > timeout) reject("Servidor no responde");
-          else setTimeout(check, 200);
+          if (Date.now() - start > timeout) reject();
+          else setTimeout(check, 250);
         });
     };
     check();
@@ -70,10 +82,10 @@ app.whenReady().then(async () => {
 
   try {
     await waitForServer("http://localhost:3000");
-    createWindow();
-  } catch (err) {
-    console.error(err);
-    createWindow(); // fallback
+    createWindow(false); // backend disponible
+  } catch {
+    console.error("⚠️ Backend no respondió, cargando HTML local...");
+    createWindow(true); // fallback
   }
 });
 

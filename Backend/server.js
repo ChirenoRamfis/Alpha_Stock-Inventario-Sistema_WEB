@@ -11,24 +11,22 @@ const PORT = 3000;
 // Middleware
 app.use(cors());
 app.use(bodyParser.json());
-// Ajusta la carpeta static según tu estructura; dejamos lo que tenías.
-// Asegúrate de que ../Frontend contenga tu index.html (o cámbialo por la ruta correcta)
-app.use(express.static(path.join(__dirname, "../Frontend")));
 
-// Abrir DB (si no existe, debes tener el .db o crear las tablas)
-const db = new sqlite3.Database(
-  path.join(__dirname, "inventario.db"),
-  (err) => {
-    if (err) return console.error("No se pudo abrir DB:", err.message);
-    console.log("DB abierta correctamente");
-  }
-);
+// 📁 Ruta segura para frontend, compatible con el ejecutable
+const frontendPath = path.join(__dirname, "..", "Frontend");
+app.use(express.static(frontendPath));
+
+// 📦 Base de datos SQLite (ruta absoluta para que funcione dentro del .exe)
+const dbPath = path.join(__dirname, "inventario.db");
+const db = new sqlite3.Database(dbPath, (err) => {
+  if (err) return console.error("❌ No se pudo abrir DB:", err.message);
+  console.log("✅ Base de datos abierta correctamente en:", dbPath);
+});
 
 // Activar llaves foráneas
 db.run("PRAGMA foreign_keys = ON;");
 
-// ---------------------- Helpers para asegurar tablas básicas ----------------------
-// (Si ya tienes la DB con tablas, esto no dañará nada; crea solo si no existen)
+// ---------------------- Crear tablas si no existen ----------------------
 const createTablesSQL = `
 CREATE TABLE IF NOT EXISTS usuarios (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -68,12 +66,10 @@ CREATE TABLE IF NOT EXISTS producto_etiqueta (
 );
 `;
 db.exec(createTablesSQL, (err) => {
-  if (err) console.error("Error creando tablas iniciales:", err.message);
+  if (err) console.error("⚠️ Error creando tablas iniciales:", err.message);
 });
 
-// ==============================================
-// USUARIOS (login y recuperación) -- se mantienen
-// ==============================================
+// ======================== LOGIN Y RECUPERACIÓN ========================
 app.post("/login", (req, res) => {
   const { username, password } = req.body;
   db.get(
@@ -82,9 +78,7 @@ app.post("/login", (req, res) => {
     (err, row) => {
       if (err) return res.status(500).json({ error: err.message });
       if (!row)
-        return res
-          .status(401)
-          .json({ error: "Usuario o contraseña incorrectos" });
+        return res.status(401).json({ error: "Usuario o contraseña incorrectos" });
       res.json({ success: true, user: { id: row.id, username: row.username } });
     }
   );
@@ -119,25 +113,16 @@ app.post("/recover-password", (req, res) => {
       db.run(
         "UPDATE usuarios SET password = ? WHERE id = ?",
         [newPassword, row.id],
-        (err) => {
-          if (err) return res.status(500).json({ error: err.message });
-          res.json({
-            success: true,
-            message: "Contraseña actualizada correctamente",
-          });
+        (err2) => {
+          if (err2) return res.status(500).json({ error: err2.message });
+          res.json({ success: true, message: "Contraseña actualizada correctamente" });
         }
       );
     }
   );
 });
 
-// ==============================================
-// CRUD Categorías
-// Rutas: GET  /api/categories
-//       POST /api/categories  { nombre }
-//       PUT  /api/categories/:id { nombre }
-//       DELETE /api/categories/:id
-// ==============================================
+// ============================ CRUD CATEGORÍAS ============================
 app.get("/api/categories", (req, res) => {
   db.all("SELECT * FROM categorias ORDER BY id DESC", (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -167,23 +152,13 @@ app.put("/api/categories/:id", (req, res) => {
 });
 
 app.delete("/api/categories/:id", (req, res) => {
-  db.run(
-    "DELETE FROM categorias WHERE id = ?",
-    [req.params.id],
-    function (err) {
-      if (err) return res.status(500).json({ error: err.message });
-      res.json({ success: true });
-    }
-  );
+  db.run("DELETE FROM categorias WHERE id = ?", [req.params.id], function (err) {
+    if (err) return res.status(500).json({ error: err.message });
+    res.json({ success: true });
+  });
 });
 
-// ==============================================
-// CRUD Etiquetas
-// Rutas: GET  /api/tags
-//       POST /api/tags  { nombre }
-//       PUT  /api/tags/:id { nombre }
-//       DELETE /api/tags/:id
-// ==============================================
+// ============================ CRUD ETIQUETAS ============================
 app.get("/api/tags", (req, res) => {
   db.all("SELECT * FROM etiquetas ORDER BY id DESC", (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
@@ -219,13 +194,7 @@ app.delete("/api/tags/:id", (req, res) => {
   });
 });
 
-// ==============================================
-// CRUD Productos
-// Rutas: GET  /api/products
-//       POST /api/products  { nombre, descripcion, precio, cantidad, categoria_id, etiquetas: [id,...] }
-//       PUT  /api/products/:id  { nombre, descripcion, precio, cantidad, categoria_id, etiquetas: [id,...] }
-//       DELETE /api/products/:id
-// ==============================================
+// ============================ CRUD PRODUCTOS ============================
 app.get("/api/products", (req, res) => {
   const sql = `
     SELECT p.id, p.nombre, p.descripcion, p.precio, p.cantidad, p.categoria_id, p.created_at,
@@ -260,8 +229,7 @@ app.get("/api/products", (req, res) => {
 });
 
 app.post("/api/products", (req, res) => {
-  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } =
-    req.body;
+  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } = req.body;
   if (!nombre || precio === undefined || categoria_id === undefined)
     return res.status(400).json({ error: "Faltan datos" });
 
@@ -285,15 +253,13 @@ app.post("/api/products", (req, res) => {
 });
 
 app.put("/api/products/:id", (req, res) => {
-  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } =
-    req.body;
+  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } = req.body;
   const id = req.params.id;
   db.run(
     `UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, cantidad = ?, categoria_id = ? WHERE id = ?`,
     [nombre, descripcion || "", precio, cantidad || 1, categoria_id, id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
-      // Actualizar etiquetas: eliminar las existentes y volver a insertar
       db.run(
         "DELETE FROM producto_etiqueta WHERE producto_id = ?",
         [id],
@@ -320,7 +286,7 @@ app.delete("/api/products/:id", (req, res) => {
   });
 });
 
-// Levantar servidor
+// ============================ INICIO SERVIDOR ============================
 app.listen(PORT, () => {
-  console.log(`Servidor corriendo en http://localhost:${PORT}`);
+  console.log(`🚀 Servidor corriendo en http://localhost:${PORT}`);
 });
