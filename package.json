@@ -31,16 +31,16 @@
     "electron-packager": "^17.1.2"
   },
   "build": {
-  "appId": "com.AlphaStock.sistema",
-  "files": [
-    "Frontend/**/*",
-    "Backend/**/*",
-    "main.js",
-    "preload.js",
-    "package.json"
-  ],
-  "win": {
-    "target": "nsis"
+    "appId": "com.AlphaStock.sistema",
+    "files": [
+      "Frontend/**/*",
+      "Backend/**/*",
+      "main.js",
+      "preload.js",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   }
-}
 }
