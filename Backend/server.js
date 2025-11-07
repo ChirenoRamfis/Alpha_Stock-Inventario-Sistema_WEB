@@ -197,7 +197,7 @@ app.delete("/api/tags/:id", (req, res) => {
 // ============================ CRUD PRODUCTOS ============================
 app.get("/api/products", (req, res) => {
   const sql = `
-    SELECT p.id, p.nombre, p.descripcion, p.precio, p.cantidad, p.categoria_id, p.created_at,
+    SELECT p.id, p.nombre, p.descripcion, p.precio,p.precio_venta, p.cantidad, p.categoria_id, p.created_at,
            c.nombre as categoria
     FROM productos p
     LEFT JOIN categorias c ON p.categoria_id = c.id
@@ -229,14 +229,14 @@ app.get("/api/products", (req, res) => {
 });
 
 app.post("/api/products", (req, res) => {
-  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } = req.body;
-  if (!nombre || precio === undefined || categoria_id === undefined)
+  const { nombre, descripcion, precio, precio_venta, categoria_id, cantidad, etiquetas } = req.body;
+  if (!nombre || precio === undefined || precio_venta === undefined || categoria_id === undefined)
     return res.status(400).json({ error: "Faltan datos" });
 
   db.run(
-    `INSERT INTO productos(nombre, descripcion, precio, cantidad, categoria_id) 
+    `INSERT INTO productos(nombre, descripcion, precio, precio_venta, cantidad, categoria_id) 
      VALUES(?,?,?,?,?)`,
-    [nombre, descripcion || "", precio, cantidad || 1, categoria_id],
+    [nombre, descripcion || "", precio, precio_venta, cantidad || 1, categoria_id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       const productId = this.lastID;
@@ -253,11 +253,11 @@ app.post("/api/products", (req, res) => {
 });
 
 app.put("/api/products/:id", (req, res) => {
-  const { nombre, descripcion, precio, categoria_id, cantidad, etiquetas } = req.body;
+  const { nombre, descripcion, precio, precio_venta, categoria_id, cantidad, etiquetas } = req.body;
   const id = req.params.id;
   db.run(
-    `UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, cantidad = ?, categoria_id = ? WHERE id = ?`,
-    [nombre, descripcion || "", precio, cantidad || 1, categoria_id, id],
+    `UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, precio_venta = ?, cantidad = ?, categoria_id = ? WHERE id = ?`,
+    [nombre, descripcion || "", precio, precio_venta, cantidad || 1, categoria_id, id],
     function (err) {
       if (err) return res.status(500).json({ error: err.message });
       db.run(

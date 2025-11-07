@@ -48,9 +48,9 @@ router.get('/:id', (req, res) => {
 
 // POST create producto
 router.post('/', (req, res) => {
-  const { nombre, descripcion, precio, categoria_id, etiqueta_ids } = req.body;
-  if (!nombre || precio === undefined || !categoria_id) return res.status(400).json({ error: 'nombre, precio, categoria_id required' });
-  db.run('INSERT INTO productos(nombre, descripcion, precio, categoria_id) VALUES (?, ?, ?, ?)', [nombre, descripcion || '', precio, categoria_id], function(err) {
+  const { nombre, descripcion, precio, precio_venta, categoria_id, etiqueta_ids } = req.body;
+  if (!nombre || precio === undefined || precio_venta === undefined || !categoria_id) return res.status(400).json({ error: 'nombre, precio, precio_venta, categoria_id required' });
+  db.run('INSERT INTO productos(nombre, descripcion, precio, precio_venta categoria_id) VALUES (?, ?, ?, ?)', [nombre, descripcion || '', precio, precio_venta, categoria_id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     const newId = this.lastID;
     if (Array.isArray(etiqueta_ids) && etiqueta_ids.length) {
@@ -69,8 +69,8 @@ router.post('/', (req, res) => {
 // PUT update producto
 router.put('/:id', (req, res) => {
   const { id } = req.params;
-  const { nombre, descripcion, precio, categoria_id, etiqueta_ids } = req.body;
-  db.run('UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, categoria_id = ? WHERE id = ?', [nombre, descripcion, precio, categoria_id, id], function(err) {
+  const { nombre, descripcion, precio, precio_venta, categoria_id, etiqueta_ids } = req.body;
+  db.run('UPDATE productos SET nombre = ?, descripcion = ?, precio = ?, precio_venta = ?, categoria_id = ? WHERE id = ?', [nombre, descripcion, precio, precio_venta, categoria_id, id], function(err) {
     if (err) return res.status(500).json({ error: err.message });
     // update tags: remove existing and insert new
     db.run('DELETE FROM producto_etiqueta WHERE producto_id = ?', [id], (err2) => {

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS productos (
     nombre TEXT NOT NULL,
     descripcion TEXT,
     cantidad INTEGER DEFAULT 1,
+    precio_venta DECIMAL(10,2) NOT NULL DEFAULT 0,
     precio REAL NOT NULL,
     categoria_id INTEGER NOT NULL,
     created_at DATETIME NOT NULL DEFAULT (datetime('now')),
@@ -42,6 +43,28 @@ CREATE TABLE IF NOT EXISTS producto_etiqueta (
     FOREIGN KEY (producto_id) REFERENCES productos(id) ON DELETE CASCADE,
     FOREIGN KEY (etiqueta_id) REFERENCES etiquetas(id) ON DELETE CASCADE
 );
+
+-- TABLA DE HISTORIAL DE VENTAS
+CREATE TABLE IF NOT EXISTS ventas (
+    id_venta INTEGER PRIMARY KEY AUTOINCREMENT,
+    fecha_venta DATETIME NOT NULL DEFAULT (datetime('now')),
+    total DECIMAL(10,2) NOT NULL DEFAULT 0,
+    ganancia_total DECIMAL(10,2) NOT NULL DEFAULT 0
+);
+
+-- TABLA DE DETALLE DE VENTAS
+CREATE TABLE IF NOT EXISTS detalle_Venta (
+    id_detalle INTEGER PRIMARY KEY AUTOINCREMENT,
+    id_venta INT NOT NULL,
+    id_producto INT NOT NULL,
+    cantidad INT NOT NULL,
+    precio_unitario DECIMAL(10,2) NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    ganancia DECIMAL(10,2) NULL,
+    FOREIGN KEY (id_venta) REFERENCES ventas(id_venta),
+    FOREIGN KEY (id_producto) REFERENCES Productos(id)
+);
+
 
 -- ==============================================
 -- DATOS DE PRUEBA
