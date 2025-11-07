@@ -38,7 +38,7 @@ function switchTab(tabId) {
   if (target) target.classList.add("active");
 
   // Botones: aplica clase active según orden conocido
-  const tabOrder = ["dashboard", "categories", "add", "list"];
+  const tabOrder = ["dashboard", "categories", "add", "list", "sales"];
   const tabs = qa(".tabs .tab");
   tabs.forEach((btn, i) => {
     if (tabOrder[i] === tabId) btn.classList.add("active");

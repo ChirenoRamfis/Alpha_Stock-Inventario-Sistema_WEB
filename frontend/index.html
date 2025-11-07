@@ -57,6 +57,67 @@
           <button class="tab" onclick="switchTab('list')">
             Lista de Productos
           </button>
+          <button class="tab" onclick="switchTab('sales')">
+            Ventas y Ganancias
+          </button>
+        </div>
+
+        
+     <div id="sales" class="tab-content">
+          <h2><i class="fa-solid fa-cart-shopping"></i> Historial de ventas y ganancias</h2>
+          <form id="productForm">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="productName">Nombre del Producto</label>
+                <input type="text" id="productName" required />
+              </div>
+              <div class="form-group">
+                <label for="productCategory">Categoría</label>
+                <select id="productCategory" required>
+                  <option value="">Seleccionar categoría</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label for="productQuantity">Cantidad</label>
+                <input type="number" id="productQuantity" min="1" required />
+              </div>
+              <div class="form-group">
+                <label for="productPrice">Precio ($)</label>
+                <input
+                  type="number"
+                  id="productPrice"
+                  step="0.01"
+                  min="0"
+                  required
+                />
+              </div>
+              <div class="form-group full-width">
+                <label for="productDescription">Descripción</label>
+                <textarea
+                  id="productDescription"
+                  placeholder="Descripción del producto (opcional)"
+                ></textarea>
+              </div>
+              <div class="form-group full-width">
+                <label>Etiquetas</label>
+                <div class="tag-input-container" id="productTagsContainer">
+                  <input
+                    type="text"
+                    id="productTagInput"
+                    placeholder="Escribe para buscar etiquetas..."
+                  />
+                </div>
+                <div
+                  id="tagSuggestions"
+                  class="tag-suggestions"
+                  style="display: none"
+                ></div>
+              </div>
+            </div>
+            <button type="submit" class="btn btn-primary">
+              Agregar Producto
+            </button>
+          </form>
         </div>
 
         <div id="dashboard" class="tab-content active">
